@@ -6,18 +6,21 @@
 	"build": {
 		"dockerfile": "Dockerfile",
 		"args": {
-			"_CLAB_VERSION": "0.61.0"
+			"_CLAB_VERSION": "0.73.0"
 		}
 	},
 	"features": {
-		"ghcr.io/devcontainers/features/docker-in-docker:latest": {},
+		// moby:false because Microsoft's moby packages aren't published for
+		// ubuntu 26.04 ("resolute"); Docker CE from download.docker.com is.
+		"ghcr.io/devcontainers/features/docker-in-docker:latest": {
+			"moby": false
+		},
 		"ghcr.io/devcontainers/features/go:latest": {},
 		"ghcr.io/guiyomh/features/golangci-lint:latest": {},
 		"ghcr.io/guiyomh/features/goreleaser:latest": {},
 		"ghcr.io/guiyomh/features/gotestsum:latest": {},
 		"ghcr.io/guiyomh/features/pact-go:latest": {},
-		"ghcr.io/azutake/devcontainer-features/go-packages-install:latest": {},
-		"ghcr.io/marcozac/devcontainer-features/gofumpt:latest": {}
+		"ghcr.io/azutake/devcontainer-features/go-packages-install:latest": {}
 	},
 	"runArgs": ["--privileged"],
 	"privileged": true,

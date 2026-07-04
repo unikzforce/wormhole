@@ -1,6 +1,10 @@
-FROM ubuntu:24.04
+# Pinned to the current LTS on purpose: a floating ubuntu:latest silently broke
+# the bpftool v7.4.0 build when 26.04's glibc/gcc landed (C23 const-correct
+# strchr + -Werror). Upgrade this tag deliberately, together with the tool tags
+# below and cmd/test_agent/test_agent.Dockerfile.
+FROM ubuntu:26.04
 
-RUN apt-get update && \
+RUN apt update && \
     echo "wireshark-common wireshark-common/install-setuid boolean true" | debconf-set-selections && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y tshark
 
@@ -22,6 +26,7 @@ RUN apt install -y cmake
 RUN apt install -y libpcap-dev
 RUN apt install -y libcap-ng-dev
 RUN apt install -y libbfd-dev
+RUN apt install -y libssl-dev
 RUN ln -sf /usr/include/asm-generic/ /usr/include/asm
 RUN apt install -y libcap-dev
 RUN apt install -y dwarves
@@ -37,23 +42,16 @@ RUN echo 'docker completion bash > ~/.local/share/bash-completion/completions/do
 RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 RUN ~/.fzf/install --all
 
-RUN cargo install --locked zellij
-
 RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
 
-RUN mkdir /tools/
+# bpftool and xdp-tools straight from the Ubuntu archive — no source builds.
+# 26.04 ships standalone bpftool (v7.7) and xdp-tools/libxdp (v1.6).
+RUN apt install -y bpftool xdp-tools libxdp-dev
 
-WORKDIR /tools/
-
-RUN git clone --recurse-submodules https://github.com/libbpf/bpftool.git
-
-RUN make -C bpftool/src/ install
-
-RUN git clone --recurse-submodules https://github.com/xdp-project/xdp-tools.git
-
-RUN make -C xdp-tools/ install
-
-WORKDIR /
+# zellij — not packaged by Ubuntu; built from source via cargo (latest release).
+RUN cargo install --locked --root /usr/local zellij && \
+    rm -rf ~/.cargo/registry ~/.cargo/git && \
+    zellij --version
 
 ENV GOPATH=/go
 ENV PATH=$PATH:$GOPATH/bin

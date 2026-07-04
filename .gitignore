@@ -21,3 +21,9 @@
 go.work
 
 .idea
+
+# macOS
+.DS_Store
+
+# Claude Code personal settings (per-user permission grants etc.)
+.claude/settings.local.json

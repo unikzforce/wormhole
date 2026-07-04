@@ -1,0 +1,1931 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wormhole — Product Scenarios &amp; Teaching Guide</title>
+<meta name="description" content="Interactive guide: how an eBPF XDP encrypted L2 overlay solves real networking problems — multi-cloud, cloud providers, industrial edge, private 5G, network security.">
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><radialGradient id="g" cx="50%" cy="50%"><stop offset="0%" stop-color="%2338e1ff"/><stop offset="100%" stop-color="%230a0f1e"/></radialGradient></defs><rect width="64" height="64" rx="14" fill="%230a0f1e"/><ellipse cx="32" cy="32" rx="22" ry="12" fill="none" stroke="url(%23g)" stroke-width="4" transform="rotate(-25 32 32)"/><circle cx="32" cy="32" r="6" fill="%2338e1ff"/></svg>'>
+<style>
+:root{
+  --bg:#070b18; --bg2:#0a1124; --panel:#0d1530; --card:#101a3a; --card2:#0c1430;
+  --ink:#e8eeff; --muted:#9fb0d8; --faint:#6b7cab; --line:#243258; --line2:#2c3d74;
+  --cyan:#38e1ff; --violet:#a78bfa; --green:#34d399; --amber:#fbbf24; --red:#fb7185;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; color:var(--ink); font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, #14204d55, transparent 60%),
+    radial-gradient(900px 500px at -10% 30%, #0e2a4a44, transparent 60%),
+    var(--bg);
+}
+::selection{background:#38e1ff33}
+a{color:var(--cyan); text-decoration:none}
+a:hover{text-decoration:underline}
+code, kbd{font-family:var(--mono); font-size:.86em; background:#0b1330; border:1px solid var(--line); border-radius:6px; padding:1px 6px; color:#a9e7ff}
+.file{font-family:var(--mono); font-size:.82em; background:#0b1330; border:1px solid var(--line); border-radius:6px; padding:1px 7px; color:#c9b8ff; white-space:nowrap}
+
+/* ---------- header ---------- */
+.site-header{max-width:1160px; margin:0 auto; padding:34px 22px 10px; display:flex; align-items:center; gap:18px}
+.logo{width:58px; height:58px; flex:none}
+.logo .ring{transform-origin:32px 32px; animation:spin 14s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.site-title h1{margin:0; font-size:26px; letter-spacing:.14em; font-weight:800}
+.site-title h1 span{color:var(--cyan)}
+.site-title p{margin:2px 0 0; color:var(--muted); font-size:14.5px}
+.header-chip{margin-left:auto; font-size:12px; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:6px 12px; white-space:nowrap}
+.header-chip b{color:var(--cyan); font-weight:600}
+
+/* ---------- tabs ---------- */
+.tabs{position:sticky; top:0; z-index:50; backdrop-filter:blur(10px);
+  background:linear-gradient(180deg,#070b18f2,#070b18d8); border-bottom:1px solid var(--line);
+  padding:10px 14px; display:flex; gap:8px; overflow-x:auto; scrollbar-width:thin;
+}
+.tabs::-webkit-scrollbar{height:6px}
+.tabs::-webkit-scrollbar-thumb{background:var(--line2); border-radius:3px}
+.tab{
+  flex:none; cursor:pointer; border:1px solid transparent; background:transparent; color:var(--muted);
+  font:600 13.5px/1 inherit; font-family:inherit; padding:10px 14px; border-radius:999px; transition:all .15s;
+}
+.tab .n{color:var(--faint); font-family:var(--mono); font-size:11px; margin-right:6px}
+.tab:hover{color:var(--ink); border-color:var(--line2)}
+.tab.active{color:var(--ink); border-color:#38e1ff55; background:linear-gradient(180deg,#152250,#0f1a3c); box-shadow:0 0 18px #38e1ff1f}
+.tab.active .n{color:var(--cyan)}
+
+/* ---------- panels & prose ---------- */
+main{max-width:1160px; margin:0 auto; padding:8px 22px 80px}
+.panel{display:none}
+.panel.active{display:block; animation:fadein .25s ease}
+@keyframes fadein{from{opacity:0; transform:translateY(6px)}to{opacity:1}}
+.panel > .prose{max-width:1160px}
+.prose p, .prose li{max-width:82ch; color:#cdd8f5}
+.prose p b, .prose li b{color:var(--ink)}
+h2.scenario{font-size:30px; margin:38px 0 4px; letter-spacing:-.01em; position:relative}
+h2.scenario .ghost{position:absolute; right:0; top:-26px; font-size:92px; font-weight:900; color:#ffffff07; letter-spacing:0; user-select:none; line-height:1}
+h2.scenario em{color:var(--cyan); font-style:normal}
+.kicker{color:var(--violet); font:700 12px/1 inherit; letter-spacing:.22em; text-transform:uppercase; margin:26px 0 0}
+h3{font-size:19px; margin:34px 0 10px; color:var(--ink)}
+h3::before{content:"§ "; color:var(--cyan)}
+h4{margin:18px 0 6px; font-size:15.5px}
+ul,ol{padding-left:24px}
+
+/* scenario meta chips */
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 6px}
+.chip{font-size:12px; color:var(--muted); border:1px solid var(--line); background:#0b1230; border-radius:999px; padding:5px 11px}
+.chip b{color:var(--ink); font-weight:600}
+.chip.c-g b{color:var(--green)} .chip.c-a b{color:var(--amber)} .chip.c-c b{color:var(--cyan)} .chip.c-v b{color:var(--violet)} .chip.c-r b{color:var(--red)}
+
+/* diagrams */
+figure.diagram{margin:22px 0; background:linear-gradient(180deg,#0c1430,#0a1128); border:1px solid var(--line); border-radius:16px; padding:14px 14px 8px; overflow:hidden}
+figure.diagram svg{display:block; width:100%; height:auto}
+figcaption{font:600 11.5px/1.5 var(--mono); color:var(--faint); padding:10px 6px 6px; letter-spacing:.06em}
+figcaption b{color:var(--muted)}
+.legend{display:flex; flex-wrap:wrap; gap:16px; padding:8px 6px 4px; font-size:12.5px; color:var(--muted)}
+.legend .lg{display:inline-flex; align-items:center; gap:7px}
+.legend i{display:inline-block; width:26px; height:0; border-top:3px solid var(--c,#38e1ff); border-radius:2px}
+.legend i.sw-dash{border-top-style:dashed}
+.legend i.sw-dot{border-top-style:dotted; border-top-width:4px}
+.legend i.sw-box{width:14px; height:14px; border:1.6px solid var(--c,#38e1ff); border-radius:4px; background:#101a3a}
+
+/* callouts */
+.co{border-left:3px solid var(--cyan); background:#0c1631; border-radius:10px; padding:13px 16px; margin:16px 0; max-width:86ch}
+.co .co-t{font-weight:700; font-size:13px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:4px; color:var(--cyan)}
+.co p{margin:6px 0; color:#cdd8f5}
+.co.warn{border-color:var(--amber)} .co.warn .co-t{color:var(--amber)}
+.co.num{border-color:var(--violet)} .co.num .co-t{color:var(--violet)}
+.co.biz{border-color:var(--green)} .co.biz .co-t{color:var(--green)}
+.co.risk{border-color:var(--red)} .co.risk .co-t{color:var(--red)}
+
+/* component cards */
+.comps{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; margin:16px 0}
+.comp{border:1px solid var(--line); background:var(--card2); border-radius:12px; padding:13px 15px}
+.comp h4{margin:0 0 5px; font-size:14px; color:var(--cyan)}
+.comp.v h4{color:var(--violet)} .comp.g h4{color:var(--green)} .comp.a h4{color:var(--amber)}
+.comp p{margin:0; font-size:13.5px; color:var(--muted); line-height:1.55}
+
+/* packet walk */
+ol.walk{list-style:none; counter-reset:st; padding-left:0; max-width:86ch}
+ol.walk li{counter-increment:st; position:relative; padding:8px 0 8px 46px; border-left:1px dashed var(--line); margin-left:16px}
+ol.walk li::before{
+  content:counter(st); position:absolute; left:-16px; top:8px; width:30px; height:30px; border-radius:50%;
+  background:var(--cyan); color:#04182b; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 12px #38e1ff44;
+}
+ol.walk li b{color:var(--ink)}
+
+/* tables */
+table.cmp{border-collapse:collapse; width:100%; margin:16px 0; font-size:13.5px}
+table.cmp th{background:#101b40; color:var(--ink); text-align:left; font-weight:700; font-size:12.5px; letter-spacing:.03em}
+table.cmp th, table.cmp td{border:1px solid var(--line); padding:9px 12px; vertical-align:top}
+table.cmp td{color:#c3cff0}
+table.cmp tr td:first-child{color:var(--ink); font-weight:600; white-space:nowrap}
+table.cmp .good{color:var(--green); font-weight:700}
+table.cmp .bad{color:var(--red); font-weight:700}
+table.cmp .meh{color:var(--amber); font-weight:700}
+table.cmp .hero-row td{background:#0f2038; border-color:#1f4a66}
+
+/* misc */
+.xref{cursor:pointer; border-bottom:1px dashed var(--cyan)}
+hr.sep{border:0; border-top:1px solid var(--line); margin:34px 0}
+footer{max-width:1160px; margin:0 auto; padding:26px 22px 50px; color:var(--faint); font-size:12.5px; border-top:1px solid var(--line)}
+footer b{color:var(--muted)}
+
+/* ---------- SVG shared classes (inline SVGs inherit page CSS) ---------- */
+svg text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.tt{fill:#e9efff; font-weight:700; font-size:14px}
+.tt15{fill:#e9efff; font-weight:700; font-size:15px}
+.tt12{fill:#e9efff; font-weight:600; font-size:12px}
+.ts{fill:#9fb0d8; font-size:12px}
+.ts11{fill:#9fb0d8; font-size:11px}
+.tf{fill:#6b7cab; font-size:10.5px}
+.tmono{font-family:var(--mono); font-size:11px; fill:#8fd7ff}
+.tmono10{font-family:var(--mono); font-size:10px; fill:#8fd7ff}
+.tc{text-anchor:middle}
+.te{text-anchor:end}
+.nb{fill:#111b3e; stroke:#2c3d74; stroke-width:1.2}
+.nb2{fill:#0d1636; stroke:#243258; stroke-width:1}
+.nb-cy{fill:#0e1d42; stroke:#38e1ff; stroke-width:1.6}
+.nb-vi{fill:#131a40; stroke:#a78bfa; stroke-width:1.6}
+.nb-gr{fill:#0d2036; stroke:#34d399; stroke-width:1.6}
+.nb-am{fill:#1c1a33; stroke:#fbbf24; stroke-width:1.4}
+.nb-rd{fill:#1d1330; stroke:#fb7185; stroke-width:1.6}
+.zone{fill:#38e1ff08; stroke:#26335c; stroke-width:1.2}
+.zone-v{fill:none; stroke:#a78bfa; stroke-width:1.6; stroke-dasharray:7 7; opacity:.85}
+.zone-r{fill:#fb718509; stroke:#fb7185; stroke-width:1.2; stroke-dasharray:5 5}
+.lnk{stroke:#3b4d8f; stroke-width:2; fill:none}
+.lnk-c{stroke:#38e1ff; stroke-width:2.2; fill:none}
+.lnk-g{stroke:#34d399; stroke-width:2.2; fill:none}
+.lnk-a{stroke:#fbbf24; stroke-width:2; fill:none}
+.lnk-r{stroke:#fb7185; stroke-width:2; fill:none}
+.lnk-v{stroke:#a78bfa; stroke-width:2; fill:none}
+.lnk-f{stroke:#2c3d74; stroke-width:2; fill:none}
+.thick{stroke-width:4}
+.flow{stroke-dasharray:7 8; animation:dashmove 1.15s linear infinite}
+.flow-slow{stroke-dasharray:6 8; animation:dashmove 2.2s linear infinite}
+@keyframes dashmove{to{stroke-dashoffset:-15}}
+.ctrl{stroke:#a78bfa; stroke-width:1.5; stroke-dasharray:3 5; fill:none; opacity:.9}
+.ic{color:#9fb0d8} .ic-c{color:#38e1ff} .ic-g{color:#34d399} .ic-a{color:#fbbf24} .ic-r{color:#fb7185} .ic-v{color:#a78bfa}
+.stepc{fill:#38e1ff}
+.stepn{fill:#04182b; font-weight:800; font-size:13px; text-anchor:middle}
+.pill{fill:#0b1330; stroke:#2c3d74; stroke-width:1}
+@media (prefers-reduced-motion: reduce){
+  .flow,.flow-slow,.logo .ring{animation:none}
+}
+@media (max-width:760px){
+  .site-title h1{font-size:20px}
+  h2.scenario{font-size:24px}
+  h2.scenario .ghost{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ======================================================================
+     Shared SVG defs: markers, filters, gradients, reusable symbols.
+     Referenced document-wide from every inline diagram via url(#id) / href.
+====================================================================== -->
+<svg aria-hidden="true" style="position:absolute;width:0;height:0" focusable="false">
+  <defs>
+    <marker id="arrC" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#38e1ff"/></marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#34d399"/></marker>
+    <marker id="arrA" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#fbbf24"/></marker>
+    <marker id="arrR" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#fb7185"/></marker>
+    <marker id="arrV" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a78bfa"/></marker>
+    <marker id="arrM" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7cab"/></marker>
+
+    <filter id="glowC" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#38e1ff" flood-opacity="0.35"/></filter>
+    <filter id="glowV" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#a78bfa" flood-opacity="0.35"/></filter>
+    <filter id="glowR" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="7" flood-color="#fb7185" flood-opacity="0.45"/></filter>
+
+    <linearGradient id="gradTun" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#38e1ff"/><stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="gradPlane" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#141f4a"/><stop offset="1" stop-color="#0c1430"/>
+    </linearGradient>
+
+    <symbol id="sym-host" viewBox="0 0 40 40">
+      <rect x="5" y="7" width="30" height="26" rx="4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="10" y1="14" x2="24" y2="14" stroke="currentColor" stroke-width="2"/>
+      <line x1="10" y1="20" x2="24" y2="20" stroke="currentColor" stroke-width="2"/>
+      <circle cx="29.5" cy="26.5" r="2" fill="currentColor"/>
+    </symbol>
+    <symbol id="sym-lock" viewBox="0 0 24 24">
+      <path d="M7.5,11 V8 a4.5,4.5 0 0 1 9,0 v3" fill="none" stroke="currentColor" stroke-width="2"/>
+      <rect x="5" y="11" width="14" height="9.5" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="12" cy="15.6" r="1.6" fill="currentColor"/>
+    </symbol>
+    <symbol id="sym-cloud" viewBox="0 0 120 60">
+      <path d="M28,50 a14,14 0 1 1 4,-27 a19,19 0 0 1 36,-6 a15,15 0 0 1 26,10 a12.5,12.5 0 0 1 -4,23 z" fill="none" stroke="currentColor" stroke-width="2.4"/>
+    </symbol>
+    <symbol id="sym-tower" viewBox="0 0 40 60">
+      <path d="M20,10 L12,54 M20,10 L28,54 M14.5,40 h11 M16.5,28 h7" stroke="currentColor" stroke-width="2" fill="none"/>
+      <circle cx="20" cy="8" r="3" fill="currentColor"/>
+      <path d="M9,10 a12,12 0 0 1 0,-1 M8,14 a14,14 0 0 1 3,-10 M32,4 a14,14 0 0 1 3,10" stroke="currentColor" stroke-width="1.8" fill="none"/>
+      <path d="M12,13 a10,10 0 0 1 2.5,-7 M28,6 a10,10 0 0 1 2.5,7" stroke="currentColor" stroke-width="1.8" fill="none"/>
+    </symbol>
+    <symbol id="sym-alert" viewBox="0 0 24 24">
+      <path d="M12,3 L22,20 H2 z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      <line x1="12" y1="9.5" x2="12" y2="14.5" stroke="currentColor" stroke-width="2.2"/>
+      <circle cx="12" cy="17.3" r="1.3" fill="currentColor"/>
+    </symbol>
+    <symbol id="sym-shield" viewBox="0 0 24 24">
+      <path d="M12,2.5 L20,5.5 V11 c0,5.5 -3.5,8.8 -8,10.5 C7.5,19.8 4,16.5 4,11 V5.5 z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M8.5,11.5 l2.5,2.5 l4.5,-5" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="sym-db" viewBox="0 0 40 44">
+      <ellipse cx="20" cy="9" rx="13" ry="5.5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M7,9 V34 a13,5.5 0 0 0 26,0 V9" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M7,21.5 a13,5.5 0 0 0 26,0" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="sym-plc" viewBox="0 0 40 40">
+      <rect x="6" y="8" width="28" height="22" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
+      <rect x="10" y="12" width="9" height="6" fill="currentColor" opacity=".7"/>
+      <line x1="23" y1="13" x2="30" y2="13" stroke="currentColor" stroke-width="2"/>
+      <line x1="23" y1="17" x2="30" y2="17" stroke="currentColor" stroke-width="2"/>
+      <path d="M10,30 v5 M16,30 v5 M22,30 v5 M28,30 v5" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="sym-gear" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12,2.8 v3 M12,18.2 v3 M2.8,12 h3 M18.2,12 h3 M5.5,5.5 l2.1,2.1 M16.4,16.4 l2.1,2.1 M18.5,5.5 l-2.1,2.1 M7.6,16.4 l-2.1,2.1" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ====================================================================== -->
+<header class="site-header">
+  <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+    <g class="ring">
+      <ellipse cx="32" cy="32" rx="24" ry="13" fill="none" stroke="url(#gradTun)" stroke-width="3.5" transform="rotate(-25 32 32)"/>
+      <ellipse cx="32" cy="32" rx="24" ry="13" fill="none" stroke="#38e1ff33" stroke-width="1.5" transform="rotate(65 32 32)"/>
+    </g>
+    <circle cx="32" cy="32" r="6" fill="#38e1ff"/>
+    <circle cx="32" cy="32" r="10" fill="none" stroke="#38e1ff55" stroke-width="1.5"/>
+  </svg>
+  <div class="site-title">
+    <h1>WORM<span>HOLE</span></h1>
+    <p>The encrypted L2 overlay that lives in the kernel — product scenarios &amp; field guide</p>
+  </div>
+  <div class="header-chip">eBPF · XDP · VXLAN · <b>bpf_crypto</b></div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Scenarios">
+  <button class="tab" role="tab" data-tab="fund"><span class="n">00</span>Fundamentals</button>
+  <button class="tab" role="tab" data-tab="landscape"><span class="n">01</span>The Landscape</button>
+  <button class="tab" role="tab" data-tab="multicloud"><span class="n">02</span>Hybrid Multi-Cloud</button>
+  <button class="tab" role="tab" data-tab="provider"><span class="n">03</span>Cloud Provider VPC</button>
+  <button class="tab" role="tab" data-tab="industrial"><span class="n">04</span>Industrial Edge</button>
+  <button class="tab" role="tab" data-tab="upf"><span class="n">05</span>Private 5G UPF</button>
+  <button class="tab" role="tab" data-tab="ndr"><span class="n">06</span>Security &amp; Observability</button>
+  <button class="tab" role="tab" data-tab="crypto"><span class="n">07</span>Crypto Deep-Dive</button>
+</nav>
+
+<main>
+  <section class="panel" id="tab-fund" role="tabpanel">
+<p class="kicker">Chapter 00 · Foundations</p>
+<h2 class="scenario"><span class="ghost">00</span>One Ethernet segment, <em>anywhere on Earth</em></h2>
+<div class="chips">
+  <span class="chip">Goal: <b>learn the machine</b></span>
+  <span class="chip c-c">Data plane: <b>XDP + TC</b></span>
+  <span class="chip c-v">Encapsulation: <b>VXLAN (MAC-in-UDP)</b></span>
+  <span class="chip c-g">Repo: <b>this is your code, generalized</b></span>
+</div>
+
+<div class="prose">
+<p>Everything Wormhole does reduces to one promise: <b>machines in different places behave as if they were plugged
+into the same Ethernet switch.</b> Same subnet, working ARP, working broadcast — even if one machine is in Berlin
+and the other in a cloud region. This tab teaches the four mechanisms that make the promise real. Every later
+scenario is just this machinery pointed at a different market.</p>
+</div>
+
+<h3>Vocabulary you need (only four terms)</h3>
+<div class="comps">
+  <div class="comp"><h4>VTEP</h4><p><b>V</b>XLAN <b>T</b>unnel <b>E</b>nd <b>P</b>oint. The box at the border of a site that wraps outgoing Ethernet frames into UDP packets and unwraps incoming ones. In Wormhole, a VTEP is any Linux machine running the agent.</p></div>
+  <div class="comp v"><h4>VNI</h4><p>Virtual Network Identifier — a 24-bit number inside the VXLAN header. Frames with different VNIs never mix. It is the isolation boundary: one VNI = one virtual Ethernet segment.</p></div>
+  <div class="comp g"><h4>Underlay / Overlay</h4><p>The <b>underlay</b> is the real IP network (office fiber, the internet, a cloud VPC). The <b>overlay</b> is the virtual Ethernet segment floating on top of it. Hosts see only the overlay.</p></div>
+  <div class="comp a"><h4>Flood-and-learn</h4><p>How a switch discovers topology: note the <i>source</i> MAC of every frame you see (learn), and send frames for unknown destinations everywhere (flood) until someone answers.</p></div>
+</div>
+
+<h3>The big picture — watch the packet travel</h3>
+<figure class="diagram">
+<svg viewBox="0 0 1200 620" role="img" aria-label="Wire-level lab topology: src, border1, border2, dst with all interfaces, IPs, MACs and cables">
+  <!-- overlay broadcast domain -->
+  <rect x="40" y="66" width="1120" height="330" rx="18" class="zone-v"/>
+  <text x="600" y="56" class="tc" font-size="12.5" fill="#a78bfa" font-weight="700" letter-spacing="1.5">OVERLAY — ONE BROADCAST DOMAIN 192.168.1.0/24 · what src and dst believe exists</text>
+
+  <!-- ================= node: src ================= -->
+  <rect x="60" y="120" width="225" height="230" rx="10" class="nb"/>
+  <rect x="60" y="120" width="225" height="26" rx="10" fill="#16214a"/>
+  <text x="72" y="138" class="tt12">src</text>
+  <text x="278" y="138" class="tf te">wormhole/test_agent</text>
+  <rect x="80" y="160" width="185" height="22" rx="5" class="nb2"/><text x="172" y="175" class="tmono10 tc">test_agent · gRPC :9000</text>
+  <rect x="80" y="188" width="185" height="22" rx="5" class="nb2"/><text x="172" y="203" class="tmono10 tc">dummy_xdp → eth1 (XDP)</text>
+  <rect x="80" y="216" width="185" height="22" rx="5" class="nb-am"/><text x="172" y="231" class="tmono10 tc">$ ping 192.168.1.11</text>
+  <!-- src.eth1 -->
+  <rect x="237" y="300" width="48" height="20" rx="4" class="pill" stroke="#38e1ff"/><text x="261" y="314" class="tmono10 tc">eth1</text>
+  <text x="261" y="372" class="tf tc">192.168.1.10/24</text>
+  <text x="261" y="385" class="tf tc">aa:c1:ab:11:10:01</text>
+  <!-- src.eth0 -->
+  <rect x="148" y="330" width="48" height="20" rx="4" class="pill"/><text x="172" y="344" class="tmono10 tc">eth0</text>
+  <text x="202" y="345" class="tf">172.20.20.4/24</text>
+
+  <!-- ================= node: border1 ================= -->
+  <rect x="345" y="120" width="225" height="230" rx="10" class="nb-cy"/>
+  <rect x="345" y="120" width="225" height="26" rx="10" fill="#123056"/>
+  <text x="357" y="138" class="tt12">border1 — VTEP</text>
+  <text x="563" y="138" class="tf te">wormhole/test_agent</text>
+  <rect x="365" y="156" width="185" height="22" rx="5" class="nb2"/><text x="457" y="171" class="tmono10 tc">vxlan_agent (Go loader)</text>
+  <rect x="365" y="184" width="185" height="22" rx="5" class="nb2"/><text x="457" y="199" class="tmono10 tc">eth1: xdp_internal + tcx</text>
+  <rect x="365" y="212" width="185" height="22" rx="5" class="nb2"/><text x="457" y="227" class="tmono10 tc">eth2: xdp_external + tcx</text>
+  <rect x="365" y="240" width="185" height="22" rx="5" class="nb2"/><text x="457" y="255" class="tmono10 tc">maps: /sys/fs/bpf (pinned)</text>
+  <!-- border1.eth1 (left) -->
+  <rect x="345" y="300" width="48" height="20" rx="4" class="pill" stroke="#38e1ff"/><text x="369" y="314" class="tmono10 tc">eth1</text>
+  <text x="369" y="372" class="tf tc">no IP · pure L2</text>
+  <text x="369" y="385" class="tf tc">aa:c1:ab:22:11:01</text>
+  <!-- border1.eth2 (right) -->
+  <rect x="522" y="300" width="48" height="20" rx="4" class="pill" stroke="#fbbf24"/><text x="546" y="314" class="tmono10 tc">eth2</text>
+  <text x="546" y="372" class="tf tc">3.3.3.1/24</text>
+  <text x="546" y="385" class="tf tc">aa:c1:ab:22:12:01</text>
+  <!-- border1.eth0 -->
+  <rect x="433" y="330" width="48" height="20" rx="4" class="pill"/><text x="457" y="344" class="tmono10 tc">eth0</text>
+  <text x="487" y="345" class="tf">172.20.20.5/24</text>
+
+  <!-- ================= node: border2 ================= -->
+  <rect x="630" y="120" width="225" height="230" rx="10" class="nb-cy"/>
+  <rect x="630" y="120" width="225" height="26" rx="10" fill="#123056"/>
+  <text x="642" y="138" class="tt12">border2 — VTEP</text>
+  <text x="848" y="138" class="tf te">wormhole/test_agent</text>
+  <rect x="650" y="156" width="185" height="22" rx="5" class="nb2"/><text x="742" y="171" class="tmono10 tc">vxlan_agent (Go loader)</text>
+  <rect x="650" y="184" width="185" height="22" rx="5" class="nb2"/><text x="742" y="199" class="tmono10 tc">eth2: xdp_external + tcx</text>
+  <rect x="650" y="212" width="185" height="22" rx="5" class="nb2"/><text x="742" y="227" class="tmono10 tc">eth1: xdp_internal + tcx</text>
+  <rect x="650" y="240" width="185" height="22" rx="5" class="nb2"/><text x="742" y="255" class="tmono10 tc">maps: /sys/fs/bpf (pinned)</text>
+  <!-- border2.eth2 (left) -->
+  <rect x="630" y="300" width="48" height="20" rx="4" class="pill" stroke="#fbbf24"/><text x="654" y="314" class="tmono10 tc">eth2</text>
+  <text x="654" y="372" class="tf tc">3.3.3.2/24</text>
+  <text x="654" y="385" class="tf tc">aa:c1:ab:33:12:01</text>
+  <!-- border2.eth1 (right) -->
+  <rect x="807" y="300" width="48" height="20" rx="4" class="pill" stroke="#38e1ff"/><text x="831" y="314" class="tmono10 tc">eth1</text>
+  <text x="831" y="372" class="tf tc">no IP · pure L2</text>
+  <text x="831" y="385" class="tf tc">aa:c1:ab:33:11:01</text>
+  <!-- border2.eth0 -->
+  <rect x="718" y="330" width="48" height="20" rx="4" class="pill"/><text x="742" y="344" class="tmono10 tc">eth0</text>
+  <text x="772" y="345" class="tf">172.20.20.2/24</text>
+
+  <!-- ================= node: dst ================= -->
+  <rect x="915" y="120" width="225" height="230" rx="10" class="nb"/>
+  <rect x="915" y="120" width="225" height="26" rx="10" fill="#16214a"/>
+  <text x="927" y="138" class="tt12">dst</text>
+  <text x="1133" y="138" class="tf te">wormhole/test_agent</text>
+  <rect x="935" y="160" width="185" height="22" rx="5" class="nb2"/><text x="1027" y="175" class="tmono10 tc">test_agent · gRPC :9000</text>
+  <rect x="935" y="188" width="185" height="22" rx="5" class="nb2"/><text x="1027" y="203" class="tmono10 tc">dummy_xdp → eth1 (XDP)</text>
+  <rect x="935" y="216" width="185" height="22" rx="5" class="nb-am"/><text x="1027" y="231" class="tmono10 tc">$ ping 192.168.1.10</text>
+  <!-- dst.eth1 (left) -->
+  <rect x="915" y="300" width="48" height="20" rx="4" class="pill" stroke="#38e1ff"/><text x="939" y="314" class="tmono10 tc">eth1</text>
+  <text x="939" y="372" class="tf tc">192.168.1.11/24</text>
+  <text x="939" y="385" class="tf tc">aa:c1:ab:44:10:01</text>
+  <!-- dst.eth0 -->
+  <rect x="1003" y="330" width="48" height="20" rx="4" class="pill"/><text x="1027" y="344" class="tmono10 tc">eth0</text>
+  <text x="1057" y="345" class="tf">172.20.20.3/24</text>
+
+  <!-- ================= cables ================= -->
+  <line x1="285" y1="310" x2="345" y2="310" class="lnk" stroke-width="2.6"/>
+  <text x="315" y="332" class="tf tc">veth</text>
+  <line x1="570" y1="310" x2="630" y2="310" class="lnk" stroke-width="2.6"/>
+  <line x1="855" y1="310" x2="915" y2="310" class="lnk" stroke-width="2.6"/>
+  <text x="885" y="332" class="tf tc">veth</text>
+
+  <!-- vxlan pipe over middle cable -->
+  <rect x="522" y="252" width="156" height="18" rx="9" fill="#34d39914" stroke="#34d399" stroke-width="1.2"/>
+  <text x="600" y="265" class="tmono10 tc" fill="#34d399">VXLAN · UDP →4790 · VNI 0 🔒</text>
+  <!-- underlay net under-brace -->
+  <path d="M516,398 L516,408 L684,408 L684,398" fill="none" stroke="#fbbf24" stroke-width="1.3"/>
+  <text x="600" y="426" class="tc" font-size="10.5" fill="#fbbf24">underlay net 3.3.3.0/24 — the "internet" of this lab</text>
+  <text x="600" y="444" class="tf tc">3.3.3.1:49152-65535 → 3.3.3.2:4790 · src port randomized so underlay ECMP can spread flows</text>
+
+  <!-- step badges -->
+  <g><circle cx="315" cy="286" r="11" class="stepc"/><text x="315" y="290.5" class="stepn">1</text></g>
+  <g><circle cx="457" cy="286" r="11" class="stepc"/><text x="457" y="290.5" class="stepn">2</text></g>
+  <g><circle cx="600" cy="234" r="11" class="stepc"/><text x="600" y="238.5" class="stepn">3</text></g>
+  <g><circle cx="742" cy="286" r="11" class="stepc"/><text x="742" y="290.5" class="stepn">4</text></g>
+  <g><circle cx="885" cy="286" r="11" class="stepc"/><text x="885" y="290.5" class="stepn">5</text></g>
+
+  <!-- animated frames on the wire -->
+  <path id="f0p1" d="M285,310 L345,310" fill="none" stroke="none"/>
+  <path id="f0p2" d="M570,310 L630,310" fill="none" stroke="none"/>
+  <path id="f0p3" d="M855,310 L915,310" fill="none" stroke="none"/>
+  <circle r="5" fill="#38e1ff">
+    <animateMotion dur="6s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.18;1" calcMode="linear"><mpath href="#f0p1"/></animateMotion>
+    <animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.18;0.19;1"/>
+  </circle>
+  <g>
+    <circle r="8.5" fill="none" stroke="#34d399" stroke-width="2.2"/>
+    <circle r="4.5" fill="#38e1ff"/>
+    <animateMotion dur="6s" repeatCount="indefinite" keyPoints="0;0;1;1" keyTimes="0;0.35;0.55;1" calcMode="linear"><mpath href="#f0p2"/></animateMotion>
+    <animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.35;0.355;0.55;0.555;1"/>
+  </g>
+  <circle r="5" fill="#38e1ff">
+    <animateMotion dur="6s" repeatCount="indefinite" keyPoints="0;0;1;1" keyTimes="0;0.72;0.9;1" calcMode="linear"><mpath href="#f0p3"/></animateMotion>
+    <animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.72;0.725;0.9;0.905;1"/>
+  </circle>
+
+  <!-- management network -->
+  <line x1="172" y1="350" x2="172" y2="520" class="lnk-f" stroke-dasharray="2 4"/>
+  <line x1="457" y1="350" x2="457" y2="520" class="lnk-f" stroke-dasharray="2 4"/>
+  <line x1="742" y1="350" x2="742" y2="520" class="lnk-f" stroke-dasharray="2 4"/>
+  <line x1="1027" y1="350" x2="1027" y2="520" class="lnk-f" stroke-dasharray="2 4"/>
+  <line x1="120" y1="520" x2="1120" y2="520" class="lnk-f" stroke-width="3"/>
+  <text x="120" y="545" class="tf">containerlab management bridge — 172.20.20.0/24 · docker · out-of-band (gRPC test control rides here, never test traffic)</text>
+
+  <text x="600" y="588" class="tf tc">this is literally test/e2e/vxlan_agent/clab-topologies/vxlan.clab.yml — run ./scripts/build_images.sh then clab deploy to touch it</text>
+</svg>
+<div class="legend">
+  <span class="lg"><i class="sw-box" style="--c:#38e1ff"></i>L2/overlay-side port</span>
+  <span class="lg"><i class="sw-box" style="--c:#fbbf24"></i>underlay-side port</span>
+  <span class="lg"><i style="--c:#3b4d8f"></i>cable (veth)</span>
+  <span class="lg"><i class="sw-dash" style="--c:#a78bfa"></i>broadcast domain</span>
+  <span class="lg"><i class="sw-dash" style="--c:#fbbf24"></i>underlay subnet</span>
+</div>
+<figcaption><b>FIG 0.1</b> — the real lab, wire by wire: src:eth1↔border1:eth1, border1:eth2↔border2:eth2, border2:eth1↔dst:eth1. Borders' eth1 carry no IP — they are transparent L2 ports; only eth2 (underlay) and the hosts' eth1 (overlay) are addressed. The frame gains its green ring only between the two eth2 ports.</figcaption>
+</figure>
+
+<h3>The packet walk, step by step (badges ①–⑤ in FIG 0.1)</h3>
+<ol class="walk">
+  <li><b>src emits a normal frame on eth1.</b> Its OS thinks 192.168.1.11 is a neighbor on the LAN, so it ARPs, gets a reply (more on how in a second), and sends a plain Ethernet frame to <code>aa:c1:ab:44:10:01</code>. Nothing special runs on src.</li>
+  <li><b>border1's XDP program catches the frame on eth1</b> — inside the NIC driver, before the kernel even allocates a socket buffer. It learns the source (<code>aa:c1:ab:11:10:01</code> lives on eth1), looks up the destination MAC in the <code>mac_table</code> BPF map, and finds: "reachable via border 3.3.3.2". It encrypts the frame with <code>bpf_crypto_encrypt</code>, prepends outer Ethernet + IP + UDP + VXLAN headers with <code>bpf_xdp_adjust_head(-50)</code>, and redirects to eth2. One program, one core, no context switch.</li>
+  <li><b>The underlay sees boring UDP.</b> Whatever sits between the two eth2 ports sees only <code>3.3.3.1:&lt;random&gt; → 3.3.3.2:4790</code>. The inner frame — addresses, payload, everything — is AES-GCM ciphertext. In the lab this hop is one veth cable; in production it is the internet.</li>
+  <li><b>border2's XDP program unwraps it on eth2.</b> It validates the auth tag, decrypts, learns "<code>aa:c1:ab:11:10:01</code> lives behind border 3.3.3.1" (MAC <em>and</em> which remote VTEP — two facts in one lookup), strips the 50 outer bytes, and redirects the original frame out eth1.</li>
+  <li><b>dst receives an ordinary Ethernet frame on eth1</b>, indistinguishable from one that crossed a desk-side switch. It replies; the same machinery runs in reverse, and now both VTEPs have fully learned both MACs — every subsequent packet takes the fast path.</li>
+</ol>
+
+<div class="co">
+  <div class="co-t">💡 Concept — why the first packet is special</div>
+  <p>Before any learning has happened, border1 has no idea where dst's MAC is. And the very first thing src sends is an ARP <em>broadcast</em> ("who has 192.168.1.11?"). Broadcasts must reach <b>every</b> node in the segment — including remote sites. XDP cannot copy a packet to multiple destinations, so the XDP program does <code>XDP_PASS</code>, handing the frame up one layer to a TC program which <em>can</em> clone (<code>bpf_clone_redirect</code>): once to each local internal port, and once per remote VTEP (each clone encapsulated). dst's ARP reply comes back unicast, both VTEPs learn from it, and flooding stops. <b>Flooding is the expensive bootstrap; learning is the steady state.</b></p>
+</div>
+
+<h3>Anatomy of the encapsulation</h3>
+<figure class="diagram">
+<svg viewBox="0 0 1200 345" role="img" aria-label="VXLAN encapsulation header layout">
+  <text x="490" y="30" class="ts">what src actually sent (the inner frame):</text>
+  <g>
+    <rect x="490" y="40" width="110" height="52" rx="6" class="nb2"/><text x="545" y="62" class="tt12 tc">Inner Eth</text><text x="545" y="80" class="tmono10 tc">14 B</text>
+    <rect x="600" y="40" width="130" height="52" rx="6" class="nb2"/><text x="665" y="62" class="tt12 tc">Inner IP</text><text x="665" y="80" class="tmono10 tc">20 B</text>
+    <rect x="730" y="40" width="380" height="52" rx="6" class="nb2"/><text x="920" y="62" class="tt12 tc">Payload (ICMP, TCP, anything)</text><text x="920" y="80" class="tmono10 tc">≤ ~1426 B</text>
+  </g>
+
+  <path d="M420,66 L420,150" class="lnk-c" marker-end="url(#arrC)"/>
+  <text x="404" y="100" class="tmono te">bpf_xdp_adjust_head(-50)</text>
+  <text x="404" y="116" class="ts11 te">the VTEP grows the packet at the front,</text>
+  <text x="404" y="131" class="ts11 te">then writes four outer headers into the gap</text>
+
+  <text x="40" y="178" class="ts">what the internet carries (the outer packet):</text>
+  <g>
+    <rect x="40"  y="190" width="110" height="52" rx="6" class="nb-am"/><text x="95"  y="212" class="tt12 tc">Outer Eth</text><text x="95"  y="230" class="tmono10 tc">14 B</text>
+    <rect x="150" y="190" width="130" height="52" rx="6" class="nb-am"/><text x="215" y="212" class="tt12 tc">Outer IP</text><text x="215" y="230" class="tmono10 tc">20 B · VTEP→VTEP</text>
+    <rect x="280" y="190" width="100" height="52" rx="6" class="nb-am"/><text x="330" y="212" class="tt12 tc">Outer UDP</text><text x="330" y="230" class="tmono10 tc">8 B · dst 4790</text>
+    <rect x="380" y="190" width="110" height="52" rx="6" class="nb-cy"/><text x="435" y="212" class="tt12 tc">VXLAN</text><text x="435" y="230" class="tmono10 tc">8 B · VNI + key_id</text>
+    <rect x="490" y="190" width="110" height="52" rx="6" class="nb2"/><text x="545" y="212" class="tt12 tc">Inner Eth</text><text x="545" y="230" class="tmono10 tc">🔒</text>
+    <rect x="600" y="190" width="130" height="52" rx="6" class="nb2"/><text x="665" y="212" class="tt12 tc">Inner IP</text><text x="665" y="230" class="tmono10 tc">🔒</text>
+    <rect x="730" y="190" width="380" height="52" rx="6" class="nb2"/><text x="920" y="212" class="tt12 tc">Payload</text><text x="920" y="230" class="tmono10 tc">🔒 ciphertext + 16 B auth tag</text>
+  </g>
+  <path d="M40,256 L40,264 L490,264 L490,256" class="lnk-a" fill="none"/>
+  <text x="265" y="282" class="ts11 tc" fill="#fbbf24">50 bytes of overhead, added and removed at line rate in XDP</text>
+
+  <!-- VXLAN byte expansion -->
+  <path d="M380,242 L330,296" class="lnk-f"/>
+  <path d="M490,242 L770,296" class="lnk-f"/>
+  <g>
+    <rect x="330" y="296" width="55"  height="34" rx="4" class="nb2"/><text x="357" y="317" class="tmono10 tc">flags 1B</text>
+    <rect x="385" y="296" width="165" height="34" rx="4" class="nb2"/><text x="467" y="317" class="tmono10 tc">reserved 3B</text>
+    <rect x="550" y="296" width="165" height="34" rx="4" class="nb-vi"/><text x="632" y="317" class="tmono10 tc">VNI 3B (24 bits)</text>
+    <rect x="715" y="296" width="55"  height="34" rx="4" class="nb-gr"/><text x="742" y="317" class="tmono10 tc">key_id</text>
+  </g>
+  <text x="800" y="317" class="ts11" fill="#34d399">← a reserved byte we claim for zero-cost key rotation (tab 07)</text>
+</svg>
+<figcaption><b>FIG 0.2</b> — MAC-in-UDP: the whole inner frame becomes UDP payload. Inner columns align vertically: encapsulation moves bytes, it never rewrites them.</figcaption>
+</figure>
+
+<div class="co num">
+  <div class="co-t">📊 Order of magnitude — the MTU tax</div>
+  <p>With a standard 1500-byte underlay MTU: 1500 − 20 (outer IP) − 8 (UDP) − 8 (VXLAN) − 8 (nonce counter) − 16 (auth tag) ≈ <b>1440 bytes for the inner frame</b> → inner IP MTU ≈ 1426 → clamp TCP MSS to ~1380 to be safe. In data centers you instead raise the underlay MTU to 1600+ ("baby giant frames") and keep a clean 1500 inside. On the WAN you clamp. Your repo already uses <code>xdp.frags</code>, so jumbo frames on the overlay work too.</p>
+</div>
+
+<div class="co warn">
+  <div class="co-t">⚠️ Reality check — two port trivia items</div>
+  <p>IANA's VXLAN port is <b>4789</b>; the Linux kernel driver historically defaulted to 8472; this codebase uses <b>4790</b> (which IANA assigned to VXLAN-GPE). Between your own VTEPs any port works — but firewalls with protocol inspection may only recognize 4789. Second: the outer UDP <em>source</em> port is randomized per flow (your <code>get_ephemeral_port()</code>) — that's not laziness, it's how underlay routers spread tunnel traffic across parallel paths (ECMP hashes the 5-tuple, and everything else about the tunnel is constant).</p>
+</div>
+
+<h3>Why XDP — the two roads through the kernel</h3>
+<figure class="diagram">
+<svg viewBox="0 0 1200 475" role="img" aria-label="Normal kernel path versus XDP fast path">
+  <text x="300" y="52" class="tt tc" fill="#fbbf24">THE LONG ROAD — normal kernel path</text>
+  <text x="300" y="70" class="ts11 tc">allocations, locks and cache misses at every layer</text>
+  <text x="900" y="52" class="tt tc" fill="#34d399">THE FAST PATH — XDP</text>
+  <text x="900" y="70" class="ts11 tc">decision made inside the driver, before an sk_buff exists</text>
+
+  <!-- left lane stack -->
+  <g>
+    <rect x="180" y="392" width="240" height="44" rx="8" class="nb"/><text x="300" y="418" class="tt12 tc">NIC + driver RX</text>
+    <rect x="180" y="330" width="240" height="40" rx="8" class="nb2"/><text x="300" y="355" class="ts tc">allocate sk_buff (copy metadata)</text>
+    <rect x="180" y="278" width="240" height="40" rx="8" class="nb2"/><text x="300" y="303" class="ts tc">TC ingress</text>
+    <rect x="180" y="226" width="240" height="40" rx="8" class="nb2"/><text x="300" y="251" class="ts tc">netfilter / conntrack</text>
+    <rect x="180" y="174" width="240" height="40" rx="8" class="nb2"/><text x="300" y="199" class="ts tc">routing / bridge decision</text>
+    <rect x="180" y="122" width="240" height="40" rx="8" class="nb2"/><text x="300" y="147" class="ts tc">socket queue → userspace copy</text>
+    <path d="M300,392 L300,372" class="lnk-a" marker-end="url(#arrA)"/>
+    <path d="M300,330 L300,320" class="lnk-a" marker-end="url(#arrA)"/>
+    <path d="M300,278 L300,268" class="lnk-a" marker-end="url(#arrA)"/>
+    <path d="M300,226 L300,216" class="lnk-a" marker-end="url(#arrA)"/>
+    <path d="M300,174 L300,164" class="lnk-a" marker-end="url(#arrA)"/>
+  </g>
+
+  <!-- right lane -->
+  <g>
+    <rect x="780" y="392" width="240" height="44" rx="8" class="nb"/><text x="900" y="418" class="tt12 tc">NIC + driver RX</text>
+    <rect x="765" y="296" width="270" height="56" rx="10" class="nb-cy" filter="url(#glowC)"/>
+    <text x="900" y="320" class="tt12 tc">XDP hook</text>
+    <text x="900" y="338" class="tmono10 tc">vxlan_xdp_internal / _external</text>
+    <path d="M900,392 L900,352" class="lnk-g" marker-end="url(#arrG)"/>
+
+    <polygon points="900,206 990,246 900,286 810,246" class="nb-vi"/>
+    <text x="900" y="242" class="tt12 tc">dst MAC in</text>
+    <text x="900" y="258" class="tt12 tc">mac_table?</text>
+    <path d="M900,296 L900,286" class="lnk-g" marker-end="url(#arrG)"/>
+
+    <rect x="1040" y="150" width="140" height="46" rx="8" class="nb-gr"/>
+    <text x="1110" y="170" class="tt12 tc">bpf_redirect</text>
+    <text x="1110" y="187" class="tmono10 tc">(+encap if remote)</text>
+    <path d="M975,230 C1030,215 1060,205 1090,196" class="lnk-g" marker-end="url(#arrG)"/>
+    <text x="1030" y="205" class="ts11" fill="#34d399">known → out</text>
+    <path d="M1110,196 C1140,300 1080,390 1022,412" class="lnk-g" marker-end="url(#arrG)"/>
+    <text x="1148" y="310" class="ts11" fill="#34d399">straight back</text>
+    <text x="1148" y="326" class="ts11" fill="#34d399">to the wire</text>
+
+    <path d="M822,258 C650,330 520,300 422,298" class="lnk-c flow" marker-end="url(#arrC)"/>
+    <text x="620" y="336" class="ts11 tc" fill="#38e1ff">unknown / broadcast → XDP_PASS: climb ONE level, let TC clone it</text>
+    <text x="620" y="352" class="tmono10 tc">vxlan_tc_internal / _external · bpf_clone_redirect per destination</text>
+  </g>
+
+  <text x="600" y="462" class="tf tc">ballpark, hardware-dependent: XDP forwarding sustains roughly 5–20× the packets-per-second-per-core of the full stack path — and Wormhole only pays the slow path during learning</text>
+</svg>
+<figcaption><b>FIG 0.3</b> — the hybrid design: XDP owns the common case, TC owns the cloning-required case. This split exists because <code>bpf_clone_redirect</code> is a TC-only capability.</figcaption>
+</figure>
+
+<h3>Map to the code you already wrote</h3>
+<table class="cmp">
+  <tr><th>File</th><th>Hook</th><th>Job in the product</th></tr>
+  <tr><td><span class="file">vxlan_xdp_internal.bpf.c</span></td><td>XDP, internal NICs</td><td>Learn local MACs · fast-path redirect · encapsulate toward remote VTEPs · pass unknowns up</td></tr>
+  <tr><td><span class="file">vxlan_xdp_external.bpf.c</span></td><td>XDP, external NICs</td><td>Decapsulate · learn (inner MAC → outer border IP) · fast-path redirect inward</td></tr>
+  <tr><td><span class="file">vxlan_tc_internal.bpf.c</span></td><td>TC ingress, internal</td><td>Flood: clone to local ports + one encapsulated clone per remote border</td></tr>
+  <tr><td><span class="file">vxlan_tc_external.bpf.c</span></td><td>TC ingress, external</td><td>Flood decapsulated frame to all local internal ports</td></tr>
+  <tr><td><span class="file">vxlan_agent (Go)</span></td><td>userspace</td><td>Loads programs, pins maps, resolves routes — grows into the <b>Wormhole Agent</b> that talks to the Controller</td></tr>
+  <tr><td><span class="file">mac_table (BPF map)</span></td><td>shared, pinned</td><td>MAC → {ifindex, border IP, last-seen} with a 5-minute <code>bpf_timer</code> TTL per entry</td></tr>
+</table>
+
+<div class="co biz">
+  <div class="co-t">💼 Business lens — the one upgrade that turns this into a product</div>
+  <p>Flood-and-learn is beautiful and needs zero coordination — but it leaks traffic and scales poorly past a handful of sites. Every serious commercial fabric (EVPN, cloud SDNs) replaces discovery with a <b>control plane that already knows the answer</b>: when an agent learns a MAC, it reports it; the Controller pushes it to every other agent's <code>mac_table</code> proactively. Flooding then only covers true broadcasts. Same data plane you have today — the Controller is the product. Keep this in mind through every scenario tab: <b>data plane = open source credibility, control plane = revenue.</b></p>
+</div>
+</section>
+  <section class="panel" id="tab-landscape" role="tabpanel">
+<p class="kicker">Chapter 01 · Know the battlefield</p>
+<h2 class="scenario"><span class="ghost">01</span>Where Wormhole sits — <em>and the corner everyone left empty</em></h2>
+<div class="chips">
+  <span class="chip">Goal: <b>positioning</b></span>
+  <span class="chip c-v">Axis 1: <b>what layer is virtualized</b></span>
+  <span class="chip c-c">Axis 2: <b>where the data plane runs</b></span>
+</div>
+
+<div class="prose">
+<p>Every "connect my machines" product answers two questions. <b>What does it virtualize?</b> — L4 gives you
+<em>connections to named services</em>, L3 gives you <em>an IP network</em>, L2 gives you <em>an Ethernet segment</em>
+(ARP, broadcast, non-IP protocols, IP mobility). <b>And where does its data plane run?</b> — a userspace daemon
+(every packet crosses the kernel boundary twice), the kernel stack (good), or inside the NIC driver via XDP
+(the practical ceiling for software). Plot the industry on those two axes and one cell is conspicuously empty.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 1200 545" role="img" aria-label="Market positioning map: virtualization layer versus data plane location">
+  <rect x="170" y="88" width="980" height="392" rx="12" fill="#0b1230" stroke="#243258"/>
+  <line x1="497" y1="88" x2="497" y2="480" stroke="#243258" stroke-dasharray="4 6"/>
+  <line x1="824" y1="88" x2="824" y2="480" stroke="#243258" stroke-dasharray="4 6"/>
+  <line x1="170" y1="219" x2="1150" y2="219" stroke="#243258" stroke-dasharray="4 6"/>
+  <line x1="170" y1="350" x2="1150" y2="350" stroke="#243258" stroke-dasharray="4 6"/>
+
+  <!-- axis labels -->
+  <text x="333" y="512" class="tt12 tc">L4 — app flows</text>
+  <text x="333" y="529" class="tf tc">"reach service X" · no ping, no network</text>
+  <text x="660" y="512" class="tt12 tc">L3 — IP packets</text>
+  <text x="660" y="529" class="tf tc">routed mesh · no ARP, no broadcast</text>
+  <text x="987" y="512" class="tt12 tc">L2 — Ethernet frames</text>
+  <text x="987" y="529" class="tf tc">full network semantics · IP mobility</text>
+  <text x="1160" y="500" class="ts11" fill="#a78bfa">richer →</text>
+
+  <text x="152" y="155" class="te ts11">USERSPACE</text>
+  <text x="152" y="171" class="te tf">2× kernel crossing</text>
+  <text x="152" y="286" class="te ts11">KERNEL STACK</text>
+  <text x="152" y="302" class="te tf">WireGuard, bridges</text>
+  <text x="152" y="417" class="te ts11">XDP / DRIVER</text>
+  <text x="152" y="433" class="te tf">pre-sk_buff</text>
+  <text x="60" y="470" class="ts11" fill="#34d399">faster ↓</text>
+
+  <!-- L4 / userspace -->
+  <rect x="248" y="120" width="170" height="44" rx="22" class="nb"/><text x="333" y="147" class="tt12 tc">Twingate</text>
+  <rect x="248" y="172" width="170" height="38" rx="19" class="nb2"/><text x="333" y="196" class="ts tc">Cloudflare Access</text>
+
+  <!-- L3 / kernel -->
+  <rect x="575" y="242" width="170" height="44" rx="22" class="nb"/><text x="660" y="269" class="tt12 tc">Tailscale</text>
+  <rect x="575" y="294" width="170" height="38" rx="19" class="nb2"/><text x="660" y="318" class="ts tc">NetBird · plain WireGuard</text>
+
+  <!-- L3 / xdp-ish -->
+  <rect x="575" y="390" width="170" height="44" rx="22" class="nb2"/><text x="660" y="409" class="ts tc">Cilium (K8s CNI)</text>
+  <text x="660" y="425" class="tf tc">overlay path is TC/kernel*</text>
+
+  <!-- L2 / userspace -->
+  <rect x="902" y="133" width="170" height="44" rx="22" class="nb-vi"/><text x="987" y="153" class="tt12 tc">ZeroTier</text>
+  <text x="987" y="169" class="tf tc">validated the L2 market</text>
+
+  <!-- L2 / kernel -->
+  <rect x="902" y="263" width="170" height="44" rx="22" class="nb2"/><text x="987" y="283" class="ts tc">OVS + VXLAN</text>
+  <text x="987" y="299" class="tf tc">ops-heavy, no crypto built in</text>
+
+  <!-- empty cells -->
+  <text x="333" y="290" class="tf tc">(L4 proxies have no reason to be here)</text>
+  <text x="333" y="420" class="tf tc">—</text>
+
+  <!-- Wormhole -->
+  <rect x="882" y="396" width="210" height="60" rx="30" class="nb-gr" filter="url(#glowC)"/>
+  <text x="987" y="422" class="tt15 tc" fill="#34d399">★ WORMHOLE</text>
+  <text x="987" y="441" class="tf tc">L2 semantics · XDP speed · bpf_crypto</text>
+  <path d="M1098,388 C1130,360 1135,330 1120,300" class="lnk-g" fill="none"/>
+  <text x="1142" y="288" class="te ts11" fill="#34d399">the empty corner:</text>
+  <text x="1142" y="304" class="te ts11" fill="#34d399">richest semantics,</text>
+  <text x="1142" y="320" class="te ts11" fill="#34d399">fastest path</text>
+</svg>
+<figcaption><b>FIG 1.1</b> — *Cilium uses XDP for load-balancing/DDoS but its pod overlay rides TC and the kernel stack — and it only exists inside Kubernetes. No product ships L2 semantics on an XDP data plane.</figcaption>
+</figure>
+
+<h3>Feature-by-feature</h3>
+<table class="cmp">
+  <tr><th>Product</th><th>Virtualizes</th><th>Data plane</th><th>ARP / broadcast / non-IP</th><th>Encryption</th><th>Per-core ceiling</th><th>Sweet spot</th></tr>
+  <tr><td>Twingate</td><td>L4 service access</td><td>Userspace proxy</td><td class="bad">✗ none</td><td>TLS per flow</td><td class="bad">proxy-bound</td><td>Employee → internal app, zero-trust access</td></tr>
+  <tr><td>Tailscale</td><td>L3 IP mesh</td><td>Kernel (WireGuard)</td><td class="bad">✗ L3 only</td><td class="good">ChaCha20-Poly1305</td><td class="meh">good</td><td>Remote access, small fleets, VPN replacement</td></tr>
+  <tr><td>ZeroTier</td><td class="good">L2 Ethernet</td><td>Userspace daemon</td><td class="good">✓ full</td><td class="good">AES-GMAC-SIV</td><td class="bad">userspace-bound</td><td>Virtual LANs, homelabs, moderate throughput</td></tr>
+  <tr><td>OVS + VXLAN</td><td class="good">L2 Ethernet</td><td>Kernel module</td><td class="good">✓ full</td><td class="bad">none (bolt on IPsec)</td><td class="meh">kernel-bound</td><td>Static DC fabrics with dedicated net teams</td></tr>
+  <tr><td>SD-WAN appliance</td><td>L3 (mostly)</td><td>Dedicated hardware</td><td class="bad">mostly ✗</td><td class="good">IPsec</td><td class="good">high — at $10–50K/site</td><td>Branch offices, MPLS replacement</td></tr>
+  <tr class="hero-row"><td>Wormhole</td><td class="good">L2 Ethernet</td><td class="good">XDP in-driver</td><td class="good">✓ full</td><td class="good">AES-GCM (bpf_crypto)</td><td class="good">highest software path</td><td>Everything above at once, on commodity Linux</td></tr>
+</table>
+
+<div class="co">
+  <div class="co-t">💡 Concept — why "userspace-bound" is a hard ceiling, not an implementation detail</div>
+  <p>A userspace overlay pays, per packet: NIC interrupt → kernel RX → copy to the daemon → decrypt →
+  <em>re-inject through the kernel TX path</em> → NIC. Two boundary crossings, two copies, scheduler jitter.
+  ZeroTier cannot fix this without rewriting its data plane from scratch — which is precisely the moat.
+  An incumbent can copy a feature in a quarter; a data-plane architecture takes years and breaks their installed base.</p>
+</div>
+
+<div class="co warn">
+  <div class="co-t">⚠️ Reality check — when Wormhole is the wrong tool</div>
+  <p>Be the vendor who says this out loud: an employee reaching an internal web app needs Twingate-style L4 access, not
+  an Ethernet segment. A 5-person startup connecting laptops needs Tailscale. Wormhole wins where at least one of
+  these is true: <b>(a)</b> the workload needs L2 semantics (broadcast, non-IP protocols, keep-my-IP mobility),
+  <b>(b)</b> throughput/CPU-efficiency is a line item someone is paid to care about, or <b>(c)</b> the network itself
+  is the product being sold (tabs 03–05).</p>
+</div>
+
+<div class="co biz">
+  <div class="co-t">💼 Business lens — the wedge order</div>
+  <p>ZeroTier proved people want L2 overlays. Tailscale proved the go-to-market: open-source client, free personal
+  tier, self-serve SaaS control plane, land-and-expand into enterprise. Wormhole's play is that motion with a
+  data plane the incumbents can't match — <b>enter through performance-critical L2 niches (tabs 02–05), expand
+  into the general overlay market from below.</b></p>
+</div>
+</section>
+  <section class="panel" id="tab-multicloud" role="tabpanel">
+<p class="kicker">Chapter 02 · Flagship scenario</p>
+<h2 class="scenario"><span class="ghost">02</span>Hybrid multi-cloud: <em>one network, three providers</em></h2>
+<div class="chips">
+  <span class="chip">Buyer: <b>platform engineering</b></span>
+  <span class="chip c-g">Encryption: <b>required — public internet</b></span>
+  <span class="chip c-a">Kernel: <b>≥ 6.10 (bpf_crypto)</b></span>
+  <span class="chip c-c">Motion: <b>self-serve, Tailscale-style</b></span>
+</div>
+
+<div class="prose">
+<p><b>The customer:</b> Meridian, a mid-size fintech. Production VMs in AWS eu-central-1, a data-science stack in
+GCP, and a rack of bare metal in a Frankfurt colo (market-data feed handlers that must live near the exchange).
+Three underlays, three IP plans, three firewall regimes — and the engineering team just wants <em>one network</em>.</p>
+<p><b>Today's pain:</b> AWS↔GCP↔colo connectivity means site-to-site VPNs or transit gateways: L3-only, per-GB
+processing fees, and every migration means re-IP'ing. Their legacy pricing engine discovers peers via UDP broadcast
+— it simply cannot work across an L3 VPN. And the DR plan ("bring standbys up in the colo with the same IPs")
+is a fantasy on routed networks, because <b>an IP address can only live inside one routing domain at a time —
+unless the network is stretched at L2.</b></p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 1200 720" role="img" aria-label="Three clouds, real VMs with named interfaces and overlay tap devices, joined by encrypted tunnels">
+  <!-- overlay membership band -->
+  <rect x="30" y="150" width="1140" height="18" rx="9" fill="#a78bfa14" stroke="#a78bfa" stroke-width="1.1" stroke-dasharray="7 6"/>
+  <text x="42" y="163" class="tmono10" fill="#c9b8ff">OVERLAY L2 SEGMENT — 172.16.0.0/16 · VNI 42 · every tap0 below is a port on THIS one virtual switch</text>
+
+  <!-- Controller -->
+  <rect x="470" y="24" width="260" height="66" rx="12" class="nb-vi" filter="url(#glowV)"/>
+  <text x="600" y="48" class="tt12 tc">Wormhole Controller — SaaS</text>
+  <text x="600" y="66" class="tmono10 tc">enroll (OIDC/mTLS) · push MAC/IP table · key epochs</text>
+  <text x="600" y="82" class="tmono10 tc">203.0.113.9:443</text>
+
+  <!-- ============ AWS VPC box ============ -->
+  <rect x="34" y="196" width="360" height="470" rx="14" class="zone"/>
+  <text x="52" y="220" class="tt12">☁ AWS eu-central-1</text>
+  <text x="378" y="220" class="tf te">VPC 10.0.0.0/16</text>
+  <rect x="52" y="234" width="324" height="24" rx="6" fill="#0c1533" stroke="#243258"/>
+  <text x="214" y="251" class="tmono10 tc">subnet 10.0.1.0/24 · igw → EIP 3.120.7.7</text>
+
+  <!-- VM web-1 -->
+  <rect x="56" y="272" width="316" height="118" rx="10" class="nb"/>
+  <rect x="56" y="272" width="316" height="24" rx="10" fill="#16214a"/><text x="68" y="289" class="tt12">VM web-1</text>
+  <text x="364" y="289" class="tf te">Linux 6.10 · wormhole-agent</text>
+  <rect x="72" y="306" width="140" height="34" rx="6" class="nb-cy"/><text x="142" y="321" class="tmono10 tc">tap0 (overlay)</text><text x="142" y="334" class="tmono10 tc">172.16.1.10</text>
+  <rect x="230" y="306" width="126" height="34" rx="6" class="nb2"/><text x="293" y="321" class="tmono10 tc">eth0 (VPC)</text><text x="293" y="334" class="tmono10 tc">10.0.1.10</text>
+  <rect x="72" y="348" width="284" height="30" rx="6" class="nb-gr"/><text x="214" y="368" class="tmono10 tc">agent: XDP+crypto on tap0 · MSS clamp · UDP/4790</text>
+
+  <!-- VM ci-runner -->
+  <rect x="56" y="404" width="316" height="118" rx="10" class="nb"/>
+  <rect x="56" y="404" width="316" height="24" rx="10" fill="#16214a"/><text x="68" y="421" class="tt12">VM ci-runner</text>
+  <text x="364" y="421" class="tf te">wormhole-agent</text>
+  <rect x="72" y="438" width="140" height="34" rx="6" class="nb-cy"/><text x="142" y="453" class="tmono10 tc">tap0 (overlay)</text><text x="142" y="466" class="tmono10 tc">172.16.1.11</text>
+  <rect x="230" y="438" width="126" height="34" rx="6" class="nb2"/><text x="293" y="453" class="tmono10 tc">eth0 (VPC)</text><text x="293" y="466" class="tmono10 tc">10.0.1.11</text>
+  <rect x="72" y="480" width="284" height="30" rx="6" class="nb-gr"/><text x="214" y="500" class="tmono10 tc">agent: XDP+crypto on tap0</text>
+
+  <!-- AWS egress point -->
+  <rect x="120" y="556" width="188" height="30" rx="15" class="nb-am"/><text x="214" y="576" class="tmono10 tc">VPC egress · src 3.120.7.7:*</text>
+  <line x1="142" y1="340" x2="180" y2="556" class="lnk-f"/><line x1="293" y1="340" x2="214" y2="556" class="lnk-f"/>
+  <line x1="142" y1="472" x2="196" y2="556" class="lnk-f"/><line x1="293" y1="472" x2="230" y2="556" class="lnk-f"/>
+
+  <!-- ============ GCP VPC box ============ -->
+  <rect x="420" y="360" width="360" height="306" rx="14" class="zone"/>
+  <text x="438" y="384" class="tt12">☁ GCP europe-west3</text>
+  <text x="764" y="384" class="tf te">VPC 10.8.0.0/16</text>
+  <rect x="438" y="398" width="324" height="24" rx="6" fill="#0c1533" stroke="#243258"/>
+  <text x="600" y="415" class="tmono10 tc">subnet 10.8.2.0/24 · cloud-nat → 34.89.2.2</text>
+
+  <rect x="442" y="436" width="316" height="118" rx="10" class="nb"/>
+  <rect x="442" y="436" width="316" height="24" rx="10" fill="#16214a"/><text x="454" y="453" class="tt12">VM db-replica</text>
+  <text x="750" y="453" class="tf te">wormhole-agent</text>
+  <rect x="458" y="470" width="140" height="34" rx="6" class="nb-cy"/><text x="528" y="485" class="tmono10 tc">tap0 (overlay)</text><text x="528" y="498" class="tmono10 tc">172.16.2.20</text>
+  <rect x="616" y="470" width="126" height="34" rx="6" class="nb2"/><text x="679" y="485" class="tmono10 tc">eth0 (VPC)</text><text x="679" y="498" class="tmono10 tc">10.8.2.20</text>
+  <rect x="458" y="512" width="284" height="30" rx="6" class="nb-gr"/><text x="600" y="532" class="tmono10 tc">agent: XDP+crypto on tap0 · postgres :5432 on overlay</text>
+
+  <rect x="506" y="600" width="188" height="30" rx="15" class="nb-am"/><text x="600" y="620" class="tmono10 tc">cloud-nat · src 34.89.2.2:*</text>
+  <line x1="528" y1="504" x2="580" y2="600" class="lnk-f"/><line x1="679" y1="504" x2="620" y2="600" class="lnk-f"/>
+
+  <!-- ============ Frankfurt colo box ============ -->
+  <rect x="806" y="196" width="360" height="470" rx="14" class="zone"/>
+  <text x="824" y="220" class="tt12">🏢 Frankfurt colo</text>
+  <text x="1150" y="220" class="tf te">owns L2 · 192.0.2.0/24</text>
+
+  <!-- gateway VTEP -->
+  <rect x="828" y="240" width="316" height="132" rx="10" class="nb-cy" filter="url(#glowC)"/>
+  <rect x="828" y="240" width="316" height="24" rx="10" fill="#123056"/><text x="840" y="257" class="tt12">gateway VTEP (1U)</text>
+  <text x="1136" y="257" class="tf te">wormhole-agent · gateway mode</text>
+  <rect x="844" y="274" width="140" height="40" rx="6" class="nb-am"/><text x="914" y="291" class="tmono10 tc">eth0 (underlay)</text><text x="914" y="305" class="tmono10 tc">198.51.100.20 (pub)</text>
+  <rect x="1000" y="274" width="128" height="40" rx="6" class="nb2"/><text x="1064" y="291" class="tmono10 tc">eth1 (rack)</text><text x="1064" y="305" class="tmono10 tc">L2 trunk to switch</text>
+  <rect x="844" y="322" width="284" height="38" rx="6" class="nb-gr"/><text x="986" y="339" class="tmono10 tc">eth0: xdp_external · eth1: xdp_internal</text><text x="986" y="353" class="tmono10 tc">this is your border1/border2 design, unchanged</text>
+
+  <!-- rack switch -->
+  <rect x="900" y="404" width="172" height="26" rx="7" class="nb2"/><text x="986" y="422" class="tmono10 tc">rack switch (dumb L2)</text>
+  <line x1="1064" y1="314" x2="1010" y2="404" class="lnk" stroke-width="2.4"/>
+  <text x="1040" y="392" class="tf tc">eth1 ↔ switch</text>
+
+  <!-- bare metal host, NO agent -->
+  <rect x="828" y="452" width="316" height="150" rx="10" class="nb"/>
+  <rect x="828" y="452" width="316" height="24" rx="10" fill="#16214a"/><text x="840" y="469" class="tt12">bare-metal · pricing-engine</text>
+  <text x="1136" y="469" class="tf te">NO agent installed</text>
+  <rect x="844" y="486" width="150" height="34" rx="6" class="nb-cy"/><text x="919" y="501" class="tmono10 tc">eth0 (overlay)</text><text x="919" y="514" class="tmono10 tc">172.16.3.30</text>
+  <rect x="1010" y="486" width="118" height="34" rx="6" class="nb2"/><text x="1069" y="507" class="tmono10 tc">MAC ..:3e:30</text>
+  <rect x="844" y="528" width="284" height="30" rx="6" class="nb-am"/><text x="986" y="548" class="tmono10 tc">legacy app: UDP-broadcast peer discovery</text>
+  <text x="986" y="576" class="tf tc">plugs into rack switch like any server — the VTEP does all the work</text>
+  <line x1="919" y1="452" x2="986" y2="430" class="lnk" stroke-width="2.4"/>
+
+  <!-- ============ encrypted tunnels between public endpoints ============ -->
+  <!-- AWS <-> colo -->
+  <path d="M308,571 C540,690 720,690 924,372" class="lnk-g" fill="none"/>
+  <!-- GCP <-> colo -->
+  <path d="M694,615 C820,660 900,620 940,372" class="lnk-g" fill="none"/>
+  <!-- AWS <-> GCP -->
+  <path d="M214,586 C300,700 480,700 560,630" class="lnk-g" fill="none"/>
+  <circle cx="616" cy="681" r="12" fill="#0d1533" stroke="#34d399" stroke-width="1.4"/><use href="#sym-lock" x="608" y="673" width="16" height="16" class="ic-g"/>
+  <circle cx="392" cy="676" r="12" fill="#0d1533" stroke="#34d399" stroke-width="1.4"/><use href="#sym-lock" x="384" y="668" width="16" height="16" class="ic-g"/>
+  <text x="600" y="706" class="tmono10 tc" fill="#34d399">underlay carries only: srcPubIP:randPort → dstPubIP:4790 · AES-GCM · inner frame invisible</text>
+
+  <!-- control-plane links (mTLS) -->
+  <path d="M470,74 C360,150 240,230 214,556" class="ctrl"/>
+  <path d="M600,90 C600,240 600,320 600,600" class="ctrl"/>
+  <path d="M730,72 C900,140 986,180 986,240" class="ctrl"/>
+  <text x="756" y="150" class="ts11" fill="#a78bfa">mTLS control (443)</text>
+</svg>
+<div class="legend">
+  <span class="lg"><i class="sw-box" style="--c:#38e1ff"></i>tap0 — overlay interface (172.16/16)</span>
+  <span class="lg"><i class="sw-box" style="--c:#243258"></i>eth0 — cloud/VPC interface</span>
+  <span class="lg"><i class="sw-box" style="--c:#fbbf24"></i>underlay egress / public IP</span>
+  <span class="lg"><i style="--c:#34d399"></i>encrypted tunnel (public↔public)</span>
+  <span class="lg"><i class="sw-dot" style="--c:#a78bfa"></i>control plane (mTLS)</span>
+</div>
+<figcaption><b>FIG 2.1</b> — real interfaces: every cloud VM keeps its <code>eth0</code> VPC address and gains a <code>tap0</code> on 172.16.0.0/16; the agent's XDP program rides tap0. Clouds forbid raw L2, so the overlay terminates <em>inside each VM</em>. The colo owns its wire, so one gateway VTEP (eth0 underlay / eth1 rack) serves the un-agented bare-metal box behind it. Tunnels exist only between public IPs; the inner frame is ciphertext.</figcaption>
+</figure>
+
+<h3>How Wormhole fits</h3>
+<div class="comps">
+  <div class="comp"><h4>Agent — host mode (clouds)</h4><p>Cloud fabrics <b>forbid L2 on the wire</b> (no ARP, no promiscuous mode — the VPC only delivers packets to known IP/MAC pairs). So inside AWS/GCP the overlay terminates <em>inside each VM</em>: the agent creates a <code>tap</code> device, attaches XDP to it, and tunnels from the VM itself.</p></div>
+  <div class="comp g"><h4>Agent — gateway mode (colo)</h4><p>Where you own the switches, one agent (or an HA pair) is the VTEP for the whole site — exactly your current <span class="file">vxlan_agent</span> border design. Zero changes to the servers behind it.</p></div>
+  <div class="comp v"><h4>Controller</h4><p>Node enrollment (SSO/OIDC for humans, tokens for machines), topology + MAC distribution, key epochs (<a class="xref" data-goto="crypto">tab 07</a>), and the admin console. This is the SaaS you bill for.</p></div>
+  <div class="comp a"><h4>Crypto module</h4><p><code>bpf_crypto</code> AES-GCM on every frame that leaves a site. Policy-driven: intra-VPC traffic can skip crypto (the cloud already isolates it), inter-site traffic never does.</p></div>
+</div>
+
+<h3>Packet walk — db-replica (GCP) reads from the colo pricing-engine</h3>
+<ol class="walk">
+  <li>The GCP VM writes to <code>172.16.3.30</code>. Kernel ARPs on the tap device; the agent <b>answers locally</b> from Controller-pushed state (ARP suppression — no flood ever leaves the VM for known hosts).</li>
+  <li>XDP on the tap encrypts the frame, wraps it, and sends UDP from the VM's own NIC to the colo gateway's public IP. To Google's fabric this is ordinary egress UDP.</li>
+  <li>The colo gateway VTEP validates + decrypts in XDP on eth0 and redirects the plain frame out eth1 onto the rack switch. The pricing-engine — a bare-metal box with no agent installed, its eth0 numbered straight on the overlay — answers normally.</li>
+  <li>Return path mirrors. Steady-state adds ~60 bytes and two XDP passes per packet; no proxies, no per-flow state on any middlebox.</li>
+</ol>
+
+<div class="co num">
+  <div class="co-t">📊 Order of magnitude — what the incumbent path costs</div>
+  <p>AWS Transit Gateway: ~$0.02/GB processed plus per-attachment hourly fees; inter-region/site VPN throughput
+  caps per tunnel (~1.25 Gbps) force ECMP gymnastics. At Meridian's 80 TB/month cross-site, TGW processing alone
+  is ≈ $1,600/mo before egress — and it still can't carry a broadcast frame or move an IP. Wormhole's pitch:
+  flat per-node pricing, cloud egress is the only per-GB cost left, and the two "impossible" workloads
+  (broadcast discovery, same-IP DR) just work.</p>
+</div>
+
+<div class="co warn">
+  <div class="co-t">⚠️ Reality check — the two things that bite in the field</div>
+  <p><b>MSS/PMTUD:</b> encapsulation shrinks the effective MTU (~1426 inner); broken ICMP paths turn that into
+  mysterious hangs. The agent must clamp TCP MSS on the tap by default — make the safe thing the default thing.
+  <b>NAT traversal:</b> v1 honestly requires one reachable UDP endpoint per site (public IP or port-forward).
+  UDP hole-punching with the Controller as rendezvous — the trick Tailscale perfected — is the fast-follow feature.</p>
+</div>
+
+<div class="co biz">
+  <div class="co-t">💼 Business lens — first 90 days if you pick this scenario</div>
+  <p>(1) Host-mode agent with tap + XDP + crypto and a hosted Controller with magic-link enrollment — "two VMs in
+  different clouds, same subnet, in under 5 minutes". (2) A published benchmark: Wormhole vs ZeroTier vs
+  Tailscale, same hardware, iperf + pps + CPU% — your XDP numbers are the launch story. (3) Free tier ≤ 5 nodes,
+  usage-based above. The wedge users: game-server operators, GPU-cloud arbitrageurs, HFT-adjacent shops — people
+  who feel the userspace ceiling <em>today</em>.</p>
+</div>
+</section>
+  <section class="panel" id="tab-provider" role="tabpanel">
+<p class="kicker">Chapter 03 · Sell the network itself</p>
+<h2 class="scenario"><span class="ghost">03</span>The regional cloud that needs a <em>real VPC product</em></h2>
+<div class="chips">
+  <span class="chip">Buyer: <b>cloud provider CTO</b></span>
+  <span class="chip c-a">Encryption: <b>optional — trusted fabric</b></span>
+  <span class="chip c-g">Fits current repo: <b>~90% as-is</b></span>
+  <span class="chip c-v">Deal size: <b>$500K–5M/yr licenses</b></span>
+</div>
+
+<div class="prose">
+<p><b>The customer:</b> Baltic Cloud — a 200-rack regional provider (think Hetzner-class, or a sovereign-cloud telco).
+Their enterprise customers keep asking for what AWS taught everyone to expect: <em>VPCs</em> — private subnets,
+bring-your-own IP ranges, security groups. AWS built Nitro, Google built Andromeda; Baltic Cloud has four engineers
+and Open vSwitch circa 2015.</p>
+<p><b>The core requirement is multi-tenancy:</b> hundreds of customers, each demanding their own isolated network —
+and they will all pick <code>10.0.0.0/24</code>. Overlapping address space on shared hardware is the defining
+problem of cloud networking, and it is exactly what the VNI field solves.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 1200 700" role="img" aria-label="Realistic spine-leaf DC fabric with underlay point-to-point links, hypervisor NICs and per-VM tap devices classified into VNIs">
+  <!-- legend row -->
+  <rect x="30" y="20" width="15" height="15" rx="4" class="nb-cy"/><text x="52" y="32" class="ts11">tenant BLUE · VNI 100100 · 10.0.0.0/24</text>
+  <rect x="330" y="20" width="15" height="15" rx="4" class="nb-rd"/><text x="352" y="32" class="ts11">tenant RED · VNI 100200 · 10.0.0.0/24 (same CIDR, different VNI)</text>
+  <text x="1170" y="32" class="te tmono10" fill="#34d399">underlay = routed /31 links, BGP-unnumbered, no VLANs</text>
+
+  <!-- spines -->
+  <g>
+    <rect x="360" y="58" width="200" height="56" rx="10" class="nb"/>
+    <rect x="360" y="58" width="200" height="22" rx="10" fill="#16214a"/><text x="372" y="74" class="tt12">spine-1</text>
+    <text x="466" y="103" class="tmono10 tc">lo 10.255.255.1</text>
+    <rect x="384" y="106" width="30" height="14" rx="3" class="pill"/><text x="399" y="117" class="tmono10 tc" font-size="8">e1/1</text>
+    <rect x="452" y="106" width="30" height="14" rx="3" class="pill"/><text x="467" y="117" class="tmono10 tc" font-size="8">e1/2</text>
+    <rect x="520" y="106" width="30" height="14" rx="3" class="pill"/><text x="535" y="117" class="tmono10 tc" font-size="8">e1/3</text>
+  </g>
+  <g>
+    <rect x="640" y="58" width="200" height="56" rx="10" class="nb"/>
+    <rect x="640" y="58" width="200" height="22" rx="10" fill="#16214a"/><text x="652" y="74" class="tt12">spine-2</text>
+    <text x="746" y="103" class="tmono10 tc">lo 10.255.255.2</text>
+    <rect x="664" y="106" width="30" height="14" rx="3" class="pill"/><text x="679" y="117" class="tmono10 tc" font-size="8">e1/1</text>
+    <rect x="732" y="106" width="30" height="14" rx="3" class="pill"/><text x="747" y="117" class="tmono10 tc" font-size="8">e1/2</text>
+    <rect x="800" y="106" width="30" height="14" rx="3" class="pill"/><text x="815" y="117" class="tmono10 tc" font-size="8">e1/3</text>
+  </g>
+
+  <!-- leaves -->
+  <g>
+    <rect x="70" y="196" width="220" height="52" rx="10" class="nb"/>
+    <rect x="70" y="196" width="220" height="22" rx="10" fill="#16214a"/><text x="82" y="212" class="tt12">leaf-1 (ToR)</text>
+    <text x="180" y="240" class="tmono10 tc">lo 10.255.0.1 · VTEP</text>
+    <rect x="96" y="188" width="30" height="14" rx="3" class="pill"/><text x="111" y="199" class="tmono10 tc" font-size="8">e1/1</text>
+    <rect x="150" y="188" width="30" height="14" rx="3" class="pill"/><text x="165" y="199" class="tmono10 tc" font-size="8">e1/2</text>
+  </g>
+  <g>
+    <rect x="490" y="196" width="220" height="52" rx="10" class="nb"/>
+    <rect x="490" y="196" width="220" height="22" rx="10" fill="#16214a"/><text x="502" y="212" class="tt12">leaf-2 (ToR)</text>
+    <text x="600" y="240" class="tmono10 tc">lo 10.255.0.2 · VTEP</text>
+    <rect x="516" y="188" width="30" height="14" rx="3" class="pill"/><text x="531" y="199" class="tmono10 tc" font-size="8">e1/1</text>
+    <rect x="570" y="188" width="30" height="14" rx="3" class="pill"/><text x="585" y="199" class="tmono10 tc" font-size="8">e1/2</text>
+  </g>
+  <g>
+    <rect x="910" y="196" width="220" height="52" rx="10" class="nb"/>
+    <rect x="910" y="196" width="220" height="22" rx="10" fill="#16214a"/><text x="922" y="212" class="tt12">leaf-3 (ToR)</text>
+    <text x="1020" y="240" class="tmono10 tc">lo 10.255.0.3 · VTEP</text>
+    <rect x="936" y="188" width="30" height="14" rx="3" class="pill"/><text x="951" y="199" class="tmono10 tc" font-size="8">e1/1</text>
+    <rect x="990" y="188" width="30" height="14" rx="3" class="pill"/><text x="1005" y="199" class="tmono10 tc" font-size="8">e1/2</text>
+  </g>
+
+  <!-- fabric /31 links -->
+  <path d="M111,188 L399,120" class="lnk-f"/><path d="M165,188 L679,120" class="lnk-f"/>
+  <path d="M531,188 L467,120" class="lnk-f"/><path d="M585,188 L747,120" class="lnk-f"/>
+  <path d="M951,188 L535,120" class="lnk-f"/><path d="M1005,188 L815,120" class="lnk-f"/>
+  <text x="250" y="160" class="tf tc" transform="rotate(-13 250 160)">.0/31</text>
+  <text x="880" y="160" class="tf tc" transform="rotate(12 880 160)">ECMP ×2</text>
+
+  <!-- ================= hypervisors ================= -->
+  <!-- hv-1 -->
+  <g>
+    <rect x="40" y="300" width="330" height="356" rx="12" class="zone"/>
+    <text x="58" y="324" class="tt12">hypervisor-1</text><text x="352" y="324" class="tf te">64-core · KVM</text>
+    <rect x="60" y="336" width="150" height="20" rx="5" class="nb2"/><text x="135" y="351" class="tmono10 tc">eno1 → leaf-1 e1/2</text>
+    <rect x="222" y="336" width="128" height="20" rx="5" class="nb2"/><text x="286" y="351" class="tmono10 tc">VTEP lo 10.255.0.1</text>
+    <line x1="135" y1="336" x2="150" y2="248" class="lnk" stroke-width="2.4"/>
+
+    <rect x="58" y="366" width="294" height="34" rx="7" class="nb-gr"/><text x="205" y="382" class="tmono10 tc">wormhole data plane — XDP on eno1 + per-tap XDP</text><text x="205" y="394" class="tmono10 tc">classify tap→VNI · anti-spoof pin · encap to remote VTEP lo</text>
+
+    <!-- blue VM -->
+    <rect x="58" y="414" width="294" height="106" rx="9" class="nb"/>
+    <rect x="58" y="414" width="294" height="22" rx="9" fill="#0e2440"/><text x="70" y="430" class="tt12" fill="#8fe3ff">VM blue/web</text><text x="340" y="430" class="tf te">tenant BLUE</text>
+    <rect x="74" y="444" width="150" height="30" rx="6" class="nb-cy"/><text x="149" y="463" class="tmono10 tc">tap-b0 · 10.0.0.4</text>
+    <rect x="238" y="444" width="98" height="30" rx="6" class="nb2"/><text x="287" y="463" class="tmono10 tc">→VNI 100100</text>
+    <text x="205" y="504" class="tf tc">vNIC MAC 52:54:00:b0:00:04</text>
+
+    <!-- red VM -->
+    <rect x="58" y="530" width="294" height="106" rx="9" class="nb"/>
+    <rect x="58" y="530" width="294" height="22" rx="9" fill="#301826"/><text x="70" y="546" class="tt12" fill="#ffb0bf">VM red/app</text><text x="340" y="546" class="tf te">tenant RED</text>
+    <rect x="74" y="560" width="150" height="30" rx="6" class="nb-rd"/><text x="149" y="579" class="tmono10 tc">tap-r0 · 10.0.0.4</text>
+    <rect x="238" y="560" width="98" height="30" rx="6" class="nb2"/><text x="287" y="579" class="tmono10 tc">→VNI 100200</text>
+    <text x="205" y="620" class="tf tc">same 10.0.0.4 — different VNI, never collides</text>
+  </g>
+
+  <!-- hv-2 -->
+  <g>
+    <rect x="435" y="300" width="330" height="356" rx="12" class="zone"/>
+    <text x="453" y="324" class="tt12">hypervisor-2</text><text x="747" y="324" class="tf te">64-core · KVM</text>
+    <rect x="455" y="336" width="150" height="20" rx="5" class="nb2"/><text x="530" y="351" class="tmono10 tc">eno1 → leaf-2 e1/2</text>
+    <rect x="617" y="336" width="128" height="20" rx="5" class="nb2"/><text x="681" y="351" class="tmono10 tc">VTEP lo 10.255.0.2</text>
+    <line x1="530" y1="336" x2="585" y2="248" class="lnk" stroke-width="2.4"/>
+
+    <rect x="453" y="366" width="294" height="34" rx="7" class="nb-gr"/><text x="600" y="382" class="tmono10 tc">wormhole data plane — XDP on eno1 + per-tap XDP</text><text x="600" y="394" class="tmono10 tc">classify tap→VNI · anti-spoof pin · encap to remote VTEP lo</text>
+
+    <rect x="453" y="414" width="294" height="106" rx="9" class="nb"/>
+    <rect x="453" y="414" width="294" height="22" rx="9" fill="#0e2440"/><text x="465" y="430" class="tt12" fill="#8fe3ff">VM blue/api</text><text x="735" y="430" class="tf te">tenant BLUE</text>
+    <rect x="469" y="444" width="150" height="30" rx="6" class="nb-cy"/><text x="544" y="463" class="tmono10 tc">tap-b0 · 10.0.0.5</text>
+    <rect x="633" y="444" width="98" height="30" rx="6" class="nb2"/><text x="682" y="463" class="tmono10 tc">→VNI 100100</text>
+    <text x="600" y="504" class="tf tc">vNIC MAC 52:54:00:b0:00:05</text>
+
+    <rect x="453" y="530" width="294" height="106" rx="9" class="nb"/>
+    <rect x="453" y="530" width="294" height="22" rx="9" fill="#301826"/><text x="465" y="546" class="tt12" fill="#ffb0bf">VM red/db</text><text x="735" y="546" class="tf te">tenant RED</text>
+    <rect x="469" y="560" width="150" height="30" rx="6" class="nb-rd"/><text x="544" y="579" class="tmono10 tc">tap-r0 · 10.0.0.5</text>
+    <rect x="633" y="560" width="98" height="30" rx="6" class="nb2"/><text x="682" y="579" class="tmono10 tc">→VNI 100200</text>
+    <text x="600" y="620" class="tf tc">postgres :5432 — reachable only within VNI 100200</text>
+  </g>
+
+  <!-- hv-3 -->
+  <g>
+    <rect x="830" y="300" width="330" height="356" rx="12" class="zone"/>
+    <text x="848" y="324" class="tt12">hypervisor-3</text><text x="1142" y="324" class="tf te">64-core · KVM</text>
+    <rect x="850" y="336" width="150" height="20" rx="5" class="nb2"/><text x="925" y="351" class="tmono10 tc">eno1 → leaf-3 e1/2</text>
+    <rect x="1012" y="336" width="128" height="20" rx="5" class="nb2"/><text x="1076" y="351" class="tmono10 tc">VTEP lo 10.255.0.3</text>
+    <line x1="925" y1="336" x2="1005" y2="248" class="lnk" stroke-width="2.4"/>
+
+    <rect x="848" y="366" width="294" height="34" rx="7" class="nb-gr"/><text x="995" y="382" class="tmono10 tc">wormhole data plane — XDP on eno1 + per-tap XDP</text><text x="995" y="394" class="tmono10 tc">classify tap→VNI · anti-spoof pin · encap to remote VTEP lo</text>
+
+    <rect x="848" y="414" width="294" height="106" rx="9" class="nb"/>
+    <rect x="848" y="414" width="294" height="22" rx="9" fill="#0e2440"/><text x="860" y="430" class="tt12" fill="#8fe3ff">VM blue/db</text><text x="1130" y="430" class="tf te">tenant BLUE</text>
+    <rect x="864" y="444" width="150" height="30" rx="6" class="nb-cy"/><text x="939" y="463" class="tmono10 tc">tap-b0 · 10.0.0.6</text>
+    <rect x="1028" y="444" width="98" height="30" rx="6" class="nb2"/><text x="1077" y="463" class="tmono10 tc">→VNI 100100</text>
+    <text x="995" y="504" class="tf tc">blue/web→blue/db spans hv-1↔hv-3 over the fabric</text>
+
+    <rect x="848" y="530" width="294" height="106" rx="9" class="nb"/>
+    <rect x="848" y="530" width="294" height="22" rx="9" fill="#301826"/><text x="860" y="546" class="tt12" fill="#ffb0bf">VM red/cache</text><text x="1130" y="546" class="tf te">tenant RED</text>
+    <rect x="864" y="560" width="150" height="30" rx="6" class="nb-rd"/><text x="939" y="579" class="tmono10 tc">tap-r0 · 10.0.0.6</text>
+    <rect x="1028" y="560" width="98" height="30" rx="6" class="nb2"/><text x="1077" y="579" class="tmono10 tc">→VNI 100200</text>
+    <text x="995" y="620" class="tf tc">redis :6379</text>
+  </g>
+
+  <!-- overlay flows across fabric -->
+  <path d="M149,414 C149,270 300,255 400,230 L470,224 C620,215 850,270 939,414" class="lnk-c flow" fill="none" marker-end="url(#arrC)" opacity=".85"/>
+  <text x="470" y="266" class="tmono10 tc" fill="#38e1ff">VNI 100100 encapsulated: lo 10.255.0.1 → lo 10.255.0.3 (blue/web → blue/db)</text>
+  <path d="M544,530 C620,470 760,470 864,560" class="lnk-r flow" fill="none" marker-end="url(#arrR)" opacity=".85"/>
+  <text x="705" y="500" class="tmono10 tc" fill="#fb7185">VNI 100200: hv-2 → hv-3</text>
+
+  <!-- controller -->
+  <rect x="915" y="58" width="255" height="70" rx="12" class="nb-vi" filter="url(#glowV)"/>
+  <text x="1042" y="80" class="tt12 tc">VPC API + Controller</text>
+  <text x="1042" y="98" class="tmono10 tc">tenant→VNI · MAC/IP → VTEP lo</text>
+  <text x="1042" y="114" class="tmono10 tc">pushes forwarding tables to agents</text>
+  <path d="M960,128 C700,220 400,300 205,366" class="ctrl"/>
+  <path d="M1010,128 C900,240 700,320 600,366" class="ctrl"/>
+  <path d="M1050,128 C1040,240 1010,320 995,366" class="ctrl"/>
+</svg>
+<div class="legend">
+  <span class="lg"><i class="sw-box" style="--c:#38e1ff"></i>tap-b0 (blue overlay port)</span>
+  <span class="lg"><i class="sw-box" style="--c:#fb7185"></i>tap-r0 (red overlay port)</span>
+  <span class="lg"><i class="sw-box" style="--c:#34d399"></i>hypervisor data plane / VTEP</span>
+  <span class="lg"><i style="--c:#3b4d8f"></i>underlay /31 cable</span>
+  <span class="lg"><i class="sw-dot" style="--c:#a78bfa"></i>Controller programming</span>
+</div>
+<figcaption><b>FIG 3.1</b> — a real 3-stage Clos: two spines, three leaf/ToR switches (each also a hardware VTEP loopback), three hypervisors cabled <code>eno1 → leaf e1/2</code>. Each hypervisor hosts one BLUE and one RED VM with the <em>identical</em> 10.0.0.x address; the per-tap XDP program tags each into its VNI and encapsulates toward the destination hypervisor's VTEP loopback. Fabric stays pure L3 with ECMP — no VLANs, no spanning tree.</figcaption>
+</figure>
+
+<h3>Why 24 bits changed the industry</h3>
+<table class="cmp">
+  <tr><th></th><th>VLAN (802.1Q)</th><th>VXLAN VNI</th></tr>
+  <tr><td>ID space</td><td class="bad">12 bits → 4,094 usable networks</td><td class="good">24 bits → 16.7 million networks</td></tr>
+  <tr><td>Fabric requirement</td><td class="bad">L2 everywhere → spanning tree, broadcast storms, trunk config on every switch</td><td class="good">plain routed L3 → ECMP load-balancing, no STP, switches stay dumb</td></tr>
+  <tr><td>Tenant address overlap</td><td class="meh">only with VRF contortions</td><td class="good">native — VNI scopes every MAC and IP</td></tr>
+  <tr><td>Where isolation is enforced</td><td>switch hardware config</td><td class="good">software at the edge (our XDP program) — API-drivable</td></tr>
+</table>
+
+<h3>Why not just run OVS like everyone else?</h3>
+<div class="prose">
+<p>Open vSwitch is the default answer and its costs are structural: a kernel-module datapath with a userspace
+daemon (<code>ovs-vswitchd</code>) that handles every flow-table miss — under churn, misses stampede the daemon
+("upcall storms") while the fast path still pays full sk_buff + conntrack overhead. The practical result on real
+clouds is <b>whole CPU cores per hypervisor burned on packet plumbing</b>. An XDP pipeline is a flat run-to-completion
+program: no upcalls, no flow-cache cliff, no conntrack unless you ask for it.</p>
+</div>
+
+<div class="co num">
+  <div class="co-t">📊 Order of magnitude — the margin argument that closes this sale</div>
+  <p>Say virtual switching consumes 4–6 cores of every 64-core hypervisor under load (a common OVS reality) and
+  XDP does the same job in ~1. On 1,000 hypervisors that's <b>3,000–5,000 cores returned to inventory</b> — sellable
+  vCPUs, not infrastructure tax. At even $20/core-month retail, the data plane pays for its own license many times
+  over. You are not selling technology; you are selling reclaimed rack capacity.</p>
+</div>
+
+<div class="co">
+  <div class="co-t">💡 Concept — the security work the edge must do</div>
+  <p>Multi-tenancy is only as strong as edge enforcement. The per-VM tap position lets the XDP program
+  <b>pin each VM to its assigned MAC + IP</b> (drop spoofed sources — port security in software), enforce
+  security-group rules as map lookups, and rate-limit per tenant. And because keys are per-VNI
+  (<a class="xref" data-goto="crypto">tab 07</a>), offering "encrypted VPC" as a premium SKU is a policy flag,
+  not a project.</p>
+</div>
+
+<div class="co warn">
+  <div class="co-t">⚠️ Reality check</div>
+  <p>This buyer needs carrier-grade: HA controller (the fabric must keep forwarding if the control plane dies —
+  agents cache last-known state), live migration of MACs, BGP/EVPN interop at the fabric border for their existing
+  routers, and 18–24 months of hardening. The prize is symmetric: 10–20 customers is a real company, and none of
+  them can churn off a data plane their whole cloud runs on.</p>
+</div>
+
+<div class="co biz">
+  <div class="co-t">💼 Business lens — first 90 days if you pick this scenario</div>
+  <p>(1) Demo-in-a-box: 3 NUCs, two overlapping-CIDR tenants, a REST call creates a network in seconds — filmed.
+  (2) One design partner: a regional provider or university/research cloud drowning in OVS ops pain; license
+  discounted to near-zero for a public case study. (3) Publish the OVS-vs-Wormhole hypervisor CPU benchmark —
+  it is the entire sales deck in one chart.</p>
+</div>
+</section>
+  <section class="panel" id="tab-industrial" role="tabpanel">
+<p class="kicker">Chapter 04 · Where hardware appliances go to die</p>
+<h2 class="scenario"><span class="ghost">04</span>Industrial edge: <em>twelve factories, one SCADA</em></h2>
+<div class="chips">
+  <span class="chip">Buyer: <b>OT / plant IT lead</b></span>
+  <span class="chip c-g">Encryption: <b>required on WAN</b></span>
+  <span class="chip c-a">Hardware: <b>€600 fanless IPC per site</b></span>
+  <span class="chip c-r">Sales cycle: <b>long — but sticky for a decade</b></span>
+</div>
+
+<div class="prose">
+<p><b>The customer:</b> Nordwerk Robotics, 12 plants across Europe. Every plant was commissioned from the same
+"golden image": identical machines, identical PLC programs, and — critically — the identical subnet
+<code>192.168.10.0/24</code>. Headquarters wants central SCADA dashboards and a cloud historian collecting
+telemetry from every plant.</p>
+<p><b>Today's pain:</b> a €18,000 firewall/VPN appliance in every plant, IPsec tunnels to HQ, and a NAT translation
+table from hell — because twelve sites share one subnet, every plant must be NAT-mapped to a fake unique range,
+and every PLC address in every SCADA screen is a lie that someone maintains by hand. Worse: industrial discovery
+protocols don't survive L3 at all.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 1200 760" role="img" aria-label="Realistic factory topology: devices cabled to managed switches, edge IPC with dual WAN interfaces, cloud SCADA VPC">
+  <!-- ============ PLANT A ============ -->
+  <rect x="30" y="40" width="430" height="470" rx="14" class="zone"/>
+  <text x="48" y="64" class="tt12">🏭 PLANT A — Stuttgart</text>
+  <text x="444" y="64" class="tf te">192.168.10.0/24 · VNI 2001</text>
+
+  <!-- devices -->
+  <rect x="50" y="86" width="180" height="64" rx="9" class="nb"/>
+  <rect x="50" y="86" width="180" height="20" rx="9" fill="#16214a"/><text x="60" y="100" class="tt12" font-size="11">PLC-1 (S7-1500)</text>
+  <text x="140" y="122" class="tmono10 tc">X1: 192.168.10.11</text>
+  <text x="140" y="136" class="tmono10 tc">28:63:36:aa:10:11</text>
+  <rect x="250" y="86" width="180" height="64" rx="9" class="nb"/>
+  <rect x="250" y="86" width="180" height="20" rx="9" fill="#16214a"/><text x="260" y="100" class="tt12" font-size="11">PLC-2 (S7-1500)</text>
+  <text x="340" y="122" class="tmono10 tc">X1: 192.168.10.12</text>
+  <text x="340" y="136" class="tmono10 tc">28:63:36:aa:10:12</text>
+  <rect x="50" y="166" width="180" height="64" rx="9" class="nb"/>
+  <rect x="50" y="166" width="180" height="20" rx="9" fill="#16214a"/><text x="60" y="180" class="tt12" font-size="11">HMI-1</text>
+  <text x="140" y="202" class="tmono10 tc">eth0: 192.168.10.41</text>
+  <text x="140" y="216" class="tmono10 tc">00:0e:8c:aa:10:41</text>
+  <rect x="250" y="166" width="180" height="64" rx="9" class="nb"/>
+  <rect x="250" y="166" width="180" height="20" rx="9" fill="#16214a"/><text x="260" y="180" class="tt12" font-size="11">vision cam-1</text>
+  <text x="340" y="202" class="tmono10 tc">eth0: 192.168.10.61</text>
+  <text x="340" y="216" class="tmono10 tc">ac:cc:8e:aa:10:61</text>
+
+  <!-- cell zone: PLCs only -->
+  <rect x="40" y="78" width="404" height="80" rx="10" class="zone-r"/>
+  <text x="242" y="172" class="tc" font-size="10" fill="#fb7185">cell zone — PROFINET IRT / EtherCAT loops terminate at the PLC; never stretched over WAN</text>
+
+  <!-- managed switch -->
+  <g>
+    <rect x="70" y="266" width="320" height="58" rx="9" class="nb"/>
+    <rect x="70" y="266" width="320" height="20" rx="9" fill="#16214a"/><text x="82" y="280" class="tt12" font-size="11">sw-a — IE-3300 managed switch</text>
+    <rect x="92"  y="258" width="34" height="14" rx="3" class="pill"/><text x="109" y="269" class="tmono10 tc" font-size="8">g1/1</text>
+    <rect x="150" y="258" width="34" height="14" rx="3" class="pill"/><text x="167" y="269" class="tmono10 tc" font-size="8">g1/2</text>
+    <rect x="208" y="258" width="34" height="14" rx="3" class="pill"/><text x="225" y="269" class="tmono10 tc" font-size="8">g1/3</text>
+    <rect x="266" y="258" width="34" height="14" rx="3" class="pill"/><text x="283" y="269" class="tmono10 tc" font-size="8">g1/4</text>
+    <rect x="324" y="316" width="34" height="14" rx="3" class="pill" stroke="#38e1ff"/><text x="341" y="327" class="tmono10 tc" font-size="8">g1/8</text>
+    <text x="230" y="310" class="tmono10 tc">mgmt: 192.168.10.2</text>
+  </g>
+  <!-- device→switch cables -->
+  <line x1="140" y1="150" x2="109" y2="258" class="lnk" stroke-width="2"/>
+  <line x1="340" y1="150" x2="167" y2="258" class="lnk" stroke-width="2"/>
+  <line x1="140" y1="230" x2="225" y2="258" class="lnk" stroke-width="2"/>
+  <line x1="340" y1="230" x2="283" y2="258" class="lnk" stroke-width="2"/>
+
+  <!-- edge IPC -->
+  <g>
+    <rect x="70" y="368" width="320" height="122" rx="10" class="nb-cy" filter="url(#glowC)"/>
+    <rect x="70" y="368" width="320" height="22" rx="10" fill="#123056"/><text x="82" y="384" class="tt12">edge IPC wh-a · fanless, €600</text>
+    <text x="382" y="384" class="tf te">wormhole-agent</text>
+    <rect x="86" y="398" width="120" height="34" rx="6" class="nb2"/><text x="146" y="413" class="tmono10 tc">eth0 → sw-a g1/8</text><text x="146" y="426" class="tmono10 tc">192.168.10.3 (mgmt)</text>
+    <rect x="218" y="398" width="76" height="34" rx="6" class="nb-am"/><text x="256" y="413" class="tmono10 tc">eth1 fiber</text><text x="256" y="426" class="tmono10 tc">203.0.113.77</text>
+    <rect x="302" y="398" width="76" height="34" rx="6" class="nb-am"/><text x="340" y="413" class="tmono10 tc">wwan0 LTE</text><text x="340" y="426" class="tmono10 tc">10.64.8.9¹</text>
+    <rect x="86" y="440" width="292" height="40" rx="6" class="nb-gr"/>
+    <text x="232" y="457" class="tmono10 tc">eth0: xdp_internal (VTEP for VNI 2001)</text>
+    <text x="232" y="471" class="tmono10 tc">eth1: xdp_external + AES-GCM · wwan0: standby</text>
+  </g>
+  <line x1="341" y1="330" x2="180" y2="398" class="lnk" stroke-width="2.4"/>
+  <text x="286" y="352" class="tf tc">trunk: all plant traffic</text>
+
+  <!-- ============ PLANT B ============ -->
+  <rect x="740" y="40" width="430" height="470" rx="14" class="zone"/>
+  <text x="758" y="64" class="tt12">🏭 PLANT B — Gdańsk</text>
+  <text x="1154" y="64" class="tf te">192.168.10.0/24 — SAME subnet · VNI 2002</text>
+
+  <rect x="760" y="86" width="180" height="64" rx="9" class="nb"/>
+  <rect x="760" y="86" width="180" height="20" rx="9" fill="#16214a"/><text x="770" y="100" class="tt12" font-size="11">PLC-1 (S7-1500)</text>
+  <text x="850" y="122" class="tmono10 tc">X1: 192.168.10.11 ← same IP</text>
+  <text x="850" y="136" class="tmono10 tc">28:63:36:bb:10:11</text>
+  <rect x="960" y="86" width="180" height="64" rx="9" class="nb"/>
+  <rect x="960" y="86" width="180" height="20" rx="9" fill="#16214a"/><text x="970" y="100" class="tt12" font-size="11">vision cam-1</text>
+  <text x="1050" y="122" class="tmono10 tc">eth0: 192.168.10.61 ← same IP</text>
+  <text x="1050" y="136" class="tmono10 tc">ac:cc:8e:bb:10:61</text>
+  <rect x="750" y="78" width="404" height="80" rx="10" class="zone-r"/>
+  <text x="952" y="172" class="tc" font-size="10" fill="#fb7185">cell zone — identical golden image, zero readdressing</text>
+
+  <g>
+    <rect x="780" y="266" width="320" height="58" rx="9" class="nb"/>
+    <rect x="780" y="266" width="320" height="20" rx="9" fill="#16214a"/><text x="792" y="280" class="tt12" font-size="11">sw-b — IE-3300 managed switch</text>
+    <rect x="802" y="258" width="34" height="14" rx="3" class="pill"/><text x="819" y="269" class="tmono10 tc" font-size="8">g1/1</text>
+    <rect x="860" y="258" width="34" height="14" rx="3" class="pill"/><text x="877" y="269" class="tmono10 tc" font-size="8">g1/2</text>
+    <rect x="1034" y="316" width="34" height="14" rx="3" class="pill" stroke="#38e1ff"/><text x="1051" y="327" class="tmono10 tc" font-size="8">g1/8</text>
+    <text x="940" y="310" class="tmono10 tc">mgmt: 192.168.10.2</text>
+  </g>
+  <line x1="850" y1="150" x2="819" y2="258" class="lnk" stroke-width="2"/>
+  <line x1="1050" y1="150" x2="877" y2="258" class="lnk" stroke-width="2"/>
+
+  <g>
+    <rect x="780" y="368" width="320" height="122" rx="10" class="nb-cy" filter="url(#glowC)"/>
+    <rect x="780" y="368" width="320" height="22" rx="10" fill="#123056"/><text x="792" y="384" class="tt12">edge IPC wh-b · fanless, €600</text>
+    <text x="1092" y="384" class="tf te">wormhole-agent</text>
+    <rect x="796" y="398" width="120" height="34" rx="6" class="nb2"/><text x="856" y="413" class="tmono10 tc">eth0 → sw-b g1/8</text><text x="856" y="426" class="tmono10 tc">192.168.10.3 (mgmt)</text>
+    <rect x="928" y="398" width="76" height="34" rx="6" class="nb-am"/><text x="966" y="413" class="tmono10 tc">eth1 DSL</text><text x="966" y="426" class="tmono10 tc">198.51.100.14</text>
+    <rect x="1012" y="398" width="76" height="34" rx="6" class="nb-am"/><text x="1050" y="413" class="tmono10 tc">wwan0 LTE</text><text x="1050" y="426" class="tmono10 tc">10.64.9.3¹</text>
+    <rect x="796" y="440" width="292" height="40" rx="6" class="nb-gr"/>
+    <text x="942" y="457" class="tmono10 tc">eth0: xdp_internal (VTEP for VNI 2002)</text>
+    <text x="942" y="471" class="tmono10 tc">eth1: xdp_external + AES-GCM · wwan0: standby</text>
+  </g>
+  <line x1="1051" y1="330" x2="890" y2="398" class="lnk" stroke-width="2.4"/>
+
+  <!-- ============ CLOUD VPC ============ -->
+  <rect x="480" y="40" width="240" height="300" rx="14" class="zone"/>
+  <text x="600" y="64" class="tt12 tc">☁ cloud VPC 10.100.0.0/24</text>
+  <g>
+    <rect x="496" y="80" width="208" height="180" rx="10" class="nb"/>
+    <rect x="496" y="80" width="208" height="22" rx="10" fill="#16214a"/><text x="508" y="96" class="tt12">VM scada-1</text>
+    <text x="696" y="96" class="tf te">wormhole-agent</text>
+    <rect x="510" y="110" width="180" height="28" rx="6" class="nb-cy"/><text x="600" y="128" class="tmono10 tc">wh0.2001 · 192.168.10.200</text>
+    <rect x="510" y="144" width="180" height="28" rx="6" class="nb-vi"/><text x="600" y="162" class="tmono10 tc">wh0.2002 · 192.168.10.200</text>
+    <rect x="510" y="178" width="180" height="28" rx="6" class="nb2"/><text x="600" y="196" class="tmono10 tc">ens5 · 10.100.0.10 (VPC)</text>
+    <text x="600" y="226" class="tf tc">same IP on both taps — one per VNI:</text>
+    <text x="600" y="240" class="tf tc">"PLC at .11" is unambiguous per plant</text>
+  </g>
+  <rect x="520" y="290" width="160" height="30" rx="15" class="nb-am"/><text x="600" y="310" class="tmono10 tc">cloud NAT · 34.107.5.5</text>
+  <line x1="600" y1="260" x2="600" y2="290" class="lnk-f"/>
+
+  <!-- ============ WAN ============ -->
+  <use href="#sym-cloud" x="510" y="380" width="180" height="90" class="ic"/>
+  <text x="600" y="500" class="ts tc">internet / LTE / Starlink</text>
+
+  <!-- tunnels -->
+  <path d="M256,432 C330,540 460,520 545,470" class="lnk-c" fill="none"/>
+  <path d="M256,432 C330,540 460,520 545,470" class="flow" stroke="#bfeaff" stroke-width="1.2" fill="none" opacity=".6"/>
+  <text x="330" y="530" class="tmono10" fill="#38e1ff">VNI 2001 · 203.0.113.77 → 34.107.5.5:4790 🔒</text>
+  <path d="M966,432 C890,540 740,520 656,470" class="lnk-v" fill="none"/>
+  <path d="M966,432 C890,540 740,520 656,470" class="flow" stroke="#ddd0ff" stroke-width="1.2" fill="none" opacity=".6"/>
+  <text x="870" y="530" class="te tmono10" fill="#a78bfa">VNI 2002 · 198.51.100.14 → 34.107.5.5:4790 🔒</text>
+  <path d="M340,432 C420,600 520,590 575,475" class="lnk-g" fill="none" stroke-dasharray="4 6" opacity=".55"/>
+  <text x="440" y="590" class="tf">wwan0 standby path — same keys, agent fails over, MACs stay learned</text>
+
+  <!-- controller -->
+  <rect x="900" y="560" width="250" height="60" rx="12" class="nb-vi" filter="url(#glowV)"/>
+  <text x="1025" y="583" class="tt12 tc">Wormhole Controller (SaaS)</text>
+  <text x="1025" y="601" class="tmono10 tc">fleet: 12 IPCs + scada-1 · ARP suppression tables</text>
+  <path d="M900,585 C700,600 400,560 240,490" class="ctrl"/>
+  <path d="M1000,560 C990,530 980,510 966,490" class="ctrl"/>
+  <path d="M950,560 C800,470 680,380 640,340" class="ctrl"/>
+
+  <!-- retired appliance -->
+  <g opacity=".85">
+    <rect x="40" y="580" width="250" height="56" rx="10" class="nb2"/>
+    <text x="165" y="602" class="ts tc">firewall/VPN appliance + NAT tables</text>
+    <text x="165" y="620" class="tmono10 tc">€18,000/site + €2,000/yr — retired</text>
+    <line x1="46" y1="586" x2="284" y2="630" stroke="#fb7185" stroke-width="3"/>
+    <line x1="284" y1="586" x2="46" y2="630" stroke="#fb7185" stroke-width="3"/>
+  </g>
+
+  <text x="600" y="700" class="tf tc">¹ CGNAT address — LTE gives no public IP; the IPC dials OUT to the cloud gateway's stable endpoint, so no inbound port is ever needed at a plant</text>
+  <text x="600" y="738" class="tf tc">packet walk: PLC-1(A) .11 → sw-a g1/1→g1/8 → IPC eth0 [XDP: learn, encrypt, encap VNI 2001] → eth1 → internet → cloud NAT → scada-1 ens5 → agent decap → wh0.2001 → SCADA app</text>
+</svg>
+<div class="legend">
+  <span class="lg"><i class="sw-box" style="--c:#38e1ff"></i>plant/overlay-side port</span>
+  <span class="lg"><i class="sw-box" style="--c:#fbbf24"></i>WAN-side port (public/CGNAT)</span>
+  <span class="lg"><i style="--c:#38e1ff"></i>VNI 2001 tunnel</span>
+  <span class="lg"><i style="--c:#a78bfa"></i>VNI 2002 tunnel</span>
+  <span class="lg"><i class="sw-dash" style="--c:#fb7185"></i>hard-real-time cell zone</span>
+</div>
+<figcaption><b>FIG 4.1</b> — wire-level: four devices per plant cabled into a managed IE switch, whose uplink port g1/8 feeds the €600 IPC. The IPC's eth0 is the VTEP leg, eth1 the encrypted WAN leg, wwan0 the LTE standby. Both plants keep the identical golden-image addressing; scada-1 in the cloud holds one tap per plant VNI — both taps numbered 192.168.10.200 — so every plant sees "its" SCADA inside its own subnet.</figcaption>
+</figure>
+
+<h3>Why L3 VPNs keep failing on the factory floor</h3>
+<table class="cmp">
+  <tr><th>Protocol</th><th>How it discovers devices</th><th>Over IPsec/L3 VPN</th><th>Over Wormhole L2</th></tr>
+  <tr><td>PROFINET DCP</td><td>Raw L2 multicast, EtherType <code>0x8892</code> — <b>not even IP</b></td><td class="bad">✗ impossible</td><td class="good">✓ carried like any frame</td></tr>
+  <tr><td>EtherNet/IP (CIP)</td><td>UDP broadcast "List Identity" on :44818</td><td class="bad">✗ broadcast dies at the router</td><td class="good">✓ flooded per VNI</td></tr>
+  <tr><td>mDNS / SSDP (cameras, printers)</td><td>Multicast 224.0.0.251 / 239.255.255.250</td><td class="bad">✗ needs per-site relays</td><td class="good">✓ native</td></tr>
+  <tr><td>OPC UA</td><td>Plain TCP to a known address</td><td class="meh">✓ works (and doesn't need us)</td><td class="good">✓ works</td></tr>
+</table>
+
+<div class="co">
+  <div class="co-t">💡 Concept — the honest engineering boundary (this wins OT trust)</div>
+  <p>Hard-real-time fieldbus traffic — EtherCAT loops, PROFINET IRT motion control with ~1–10 ms cycle budgets —
+  <b>must never be stretched across a WAN</b>, and a vendor who suggests otherwise gets ejected from the building.
+  The red "cell zone" in FIG 4.1 encodes IEC&nbsp;62443's zones-and-conduits idea: real-time stays inside the cell;
+  Wormhole is the <em>conduit</em> for supervisory traffic — SCADA reads, telemetry, discovery, remote engineering.
+  XDP still earns its keep there: a deterministic in-kernel path means no conntrack jitter on 100 ms polling loops.</p>
+</div>
+
+<div class="co warn">
+  <div class="co-t">⚠️ Reality check — broadcast across 12 sites needs adult supervision</div>
+  <p>Naive flood-and-learn would replicate every ARP across every WAN link. Two Controller-powered fixes:
+  <b>ARP suppression</b> (the Controller knows every MAC/IP in the fleet, so the local agent answers ARPs itself —
+  the query never leaves the plant) and <b>MAC pre-population</b> (push learned tables to all sites, so flooding
+  is reserved for genuinely new devices). Your repo's 5-minute <code>bpf_timer</code> TTL remains as the safety
+  net for stale entries. WAN blips are survivable: dual uplinks re-establish tunnels while learned state persists.</p>
+</div>
+
+<div class="co num">
+  <div class="co-t">📊 Order of magnitude — the CFO slide</div>
+  <p>Status quo: 12 × €18K appliances + 12 × €2K/yr support ≈ <b>€216K capex + €24K/yr</b>, plus the invisible cost:
+  every SCADA integration billed against the NAT spreadsheet. Wormhole: 12 × €600 IPC + a per-site subscription
+  (say €100–150/site/mo → €14–22K/yr). The appliance refresh cycle (every 5–7 years) is your natural entry moment.</p>
+</div>
+
+<div class="co biz">
+  <div class="co-t">💼 Business lens — first 90 days if you pick this scenario</div>
+  <p>(1) A "plant-in-a-briefcase" demo: two mini-PCs, a PLC simulator and a SCADA screen discovering it across a
+  4G link — OT buyers believe demos, not decks. (2) Partner with one system integrator who commissions plants —
+  they install you 12 times a year forever. (3) Certify on one industrial PC line (e.g., a fanless Advantech/OnLogic
+  box) and publish the exact BOM. Traction here also pre-sells tab 06: the same agent already sees every OT flow.</p>
+</div>
+</section>
+  <section class="panel" id="tab-upf" role="tabpanel">
+<p class="kicker">Chapter 05 · Same primitives, telecom prices</p>
+<h2 class="scenario"><span class="ghost">05</span>Private 5G: <em>the UPF is a tunnel switch — you already build those</em></h2>
+<div class="chips">
+  <span class="chip">Buyer: <b>private-5G integrator / MVNO</b></span>
+  <span class="chip c-a">Encryption: <b>not needed — PDCP covers the air</b></span>
+  <span class="chip c-c">Data plane reuse: <b>same skeleton, new headers</b></span>
+  <span class="chip c-v">GTM: <b>be the fast data plane for open 5G cores</b></span>
+</div>
+
+<div class="prose">
+<p><b>The customer:</b> a container port deploying private 5G — hundreds of AGVs, 8K crane cameras, thousands of
+sensors. In every 5G network, one box touches <em>all</em> user traffic: the <b>UPF</b> (User Plane Function).
+It terminates GTP-U tunnels from the radio, applies per-session rules, and forwards to the internet or local apps.
+It is the throughput bottleneck and the license line-item of the whole deployment.</p>
+<p><b>The insight that makes this tab exist:</b> GTP-U — the tunneling protocol of all mobile networks —
+is structurally VXLAN's sibling. Outer IP, outer UDP, an 8-byte tunnel header carrying an ID, inner packet.
+A UPF is a tunnel-encap/decap switch with per-tunnel policy. <b>You have already written 90% of that machine.</b></p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 1200 640" role="img" aria-label="Realistic private 5G topology: UEs, gNB with N3 interface, UPF server with named NICs for N3, N6, N4 and MEC breakout">
+  <!-- campus -->
+  <rect x="30" y="120" width="330" height="380" rx="14" class="zone"/>
+  <text x="195" y="144" class="tt tc">PRIVATE 5G CAMPUS — container port</text>
+  <text x="195" y="161" class="tf tc">UE pool 10.45.0.0/16 (assigned by SMF)</text>
+
+  <rect x="50" y="182" width="150" height="58" rx="9" class="nb"/>
+  <rect x="50" y="182" width="150" height="20" rx="9" fill="#16214a"/><text x="60" y="196" class="tt12" font-size="11">UE agv-17</text>
+  <text x="125" y="216" class="tmono10 tc">10.45.0.23</text>
+  <text x="125" y="230" class="tmono10 tc">IMSI …001017</text>
+  <rect x="50" y="254" width="150" height="58" rx="9" class="nb"/>
+  <rect x="50" y="254" width="150" height="20" rx="9" fill="#16214a"/><text x="60" y="268" class="tt12" font-size="11">UE crane-cam-9</text>
+  <text x="125" y="288" class="tmono10 tc">10.45.0.87</text>
+  <text x="125" y="302" class="tmono10 tc">8K RTP uplink</text>
+  <rect x="50" y="326" width="150" height="58" rx="9" class="nb"/>
+  <rect x="50" y="326" width="150" height="20" rx="9" fill="#16214a"/><text x="60" y="340" class="tt12" font-size="11">UE sensors ×2000</text>
+  <text x="125" y="360" class="tmono10 tc">10.45.4.0/22</text>
+  <text x="125" y="374" class="tmono10 tc">NB-IoT class</text>
+
+  <!-- gNB -->
+  <g>
+    <rect x="228" y="182" width="112" height="270" rx="10" class="nb"/>
+    <rect x="228" y="182" width="112" height="22" rx="10" fill="#16214a"/><text x="240" y="198" class="tt12">gNB-1</text>
+    <use href="#sym-tower" x="256" y="214" width="52" height="78" class="ic-c"/>
+    <text x="284" y="316" class="tmono10 tc">NR cell n78</text>
+    <text x="284" y="330" class="tmono10 tc">3.7 GHz</text>
+    <rect x="288" y="404" width="48" height="20" rx="4" class="pill" stroke="#38e1ff"/><text x="312" y="418" class="tmono10 tc">n3</text>
+    <text x="282" y="396" class="te tf">10.10.3.1/24</text>
+  </g>
+  <path d="M200,212 L228,236" class="lnk-f" stroke-dasharray="3 5"/>
+  <path d="M200,284 L228,284" class="lnk-f" stroke-dasharray="3 5"/>
+  <path d="M200,356 L228,330" class="lnk-f" stroke-dasharray="3 5"/>
+  <text x="212" y="252" class="tf" transform="rotate(-90 212 252)">radio (PDCP-encrypted)</text>
+
+  <!-- N3 cable -->
+  <line x1="336" y1="414" x2="450" y2="414" class="lnk-c flow" stroke-width="2.6"/>
+  <text x="393" y="398" class="tmono10 tc" fill="#38e1ff">N3 · GTP-U UDP 2152</text>
+  <text x="393" y="436" class="tmono10 tc" fill="#38e1ff">TEID 0x1a2b41</text>
+
+  <!-- UPF server -->
+  <g>
+    <rect x="450" y="150" width="330" height="350" rx="14" class="nb-cy" filter="url(#glowC)"/>
+    <rect x="450" y="150" width="330" height="26" rx="14" fill="#123056"/>
+    <text x="462" y="168" class="tt12">upf-1 · 2U edge server (16-core, 30 W idle)</text>
+    <!-- NIC stubs -->
+    <rect x="450" y="404" width="52" height="20" rx="4" class="pill" stroke="#38e1ff"/><text x="476" y="418" class="tmono10 tc">ens1</text>
+    <text x="510" y="410" class="tf">N3 · 10.10.3.2/24</text>
+    <rect x="728" y="240" width="52" height="20" rx="4" class="pill" stroke="#34d399"/><text x="754" y="254" class="tmono10 tc">ens2</text>
+    <text x="722" y="232" class="te tf">N6 · 203.0.113.50/28</text>
+    <rect x="728" y="404" width="52" height="20" rx="4" class="pill" stroke="#fbbf24"/><text x="754" y="418" class="tmono10 tc">ens3</text>
+    <text x="722" y="436" class="te tf">MEC · 192.168.90.1/24</text>
+    <rect x="512" y="126" width="52" height="20" rx="4" class="pill" stroke="#a78bfa"/><text x="538" y="140" class="tmono10 tc">eno0</text>
+    <text x="572" y="140" class="tf">N4 mgmt · 10.10.4.2</text>
+    <!-- pipeline -->
+    <rect x="472" y="196" width="240" height="30" rx="6" class="nb2"/><text x="592" y="216" class="tmono10 tc">XDP@ens1: match TEID → session (PDR)</text>
+    <rect x="472" y="232" width="240" height="30" rx="6" class="nb2"/><text x="592" y="252" class="tmono10 tc">token bucket per QER · e.g. cam-9 ≤ 80 Mbps</text>
+    <rect x="472" y="268" width="240" height="30" rx="6" class="nb2"/><text x="592" y="288" class="tmono10 tc">URR counters → ringbuf → billing</text>
+    <rect x="472" y="304" width="240" height="30" rx="6" class="nb2"/><text x="592" y="324" class="tmono10 tc">FAR: strip GTP-U, route ens2 / ens3</text>
+    <rect x="472" y="348" width="240" height="34" rx="6" class="nb-gr"/><text x="592" y="362" class="tmono10 tc">wormhole-agent: PFCP ↔ BPF maps</text><text x="592" y="376" class="tmono10 tc">(same loader pattern as vxlan_agent)</text>
+    <text x="615" y="472" class="tf tc">downlink mirror: ens2/ens3 → add GTP-U (TEID) → ens1</text>
+  </g>
+
+  <!-- SMF -->
+  <rect x="500" y="34" width="240" height="56" rx="12" class="nb-vi" filter="url(#glowV)"/>
+  <text x="620" y="56" class="tt12 tc">5G core (cloud) — SMF / AMF</text>
+  <text x="620" y="74" class="tmono10 tc">smf.core.example:8805 (PFCP)</text>
+  <path d="M600,90 C580,104 550,112 538,126" class="ctrl" marker-end="url(#arrV)"/>
+  <text x="700" y="120" class="ts11" fill="#a78bfa">N4/PFCP: create session {TEID, UE-IP, QER, URR}</text>
+
+  <!-- border router + internet -->
+  <g>
+    <rect x="860" y="196" width="160" height="88" rx="10" class="nb"/>
+    <rect x="860" y="196" width="160" height="20" rx="10" fill="#16214a"/><text x="872" y="210" class="tt12" font-size="11">edge-rtr-1</text>
+    <rect x="860" y="236" width="44" height="18" rx="4" class="pill"/><text x="882" y="249" class="tmono10 tc" font-size="8">ge-0/0</text>
+    <rect x="976" y="236" width="44" height="18" rx="4" class="pill"/><text x="998" y="249" class="tmono10 tc" font-size="8">ge-0/1</text>
+    <text x="940" y="272" class="tmono10 tc">203.0.113.49 · BGP to ISP</text>
+  </g>
+  <line x1="780" y1="250" x2="860" y2="245" class="lnk-g flow" stroke-width="2.4"/>
+  <use href="#sym-cloud" x="1040" y="200" width="130" height="65" class="ic"/>
+  <text x="1105" y="290" class="ts tc">internet</text>
+  <line x1="1020" y1="245" x2="1052" y2="238" class="lnk" stroke-width="2.4"/>
+
+  <!-- MEC -->
+  <g>
+    <rect x="860" y="380" width="280" height="120" rx="10" class="nb-gr"/>
+    <rect x="860" y="380" width="280" height="22" rx="10" fill="#0d2a22"/><text x="872" y="396" class="tt12">mec-1 · on-prem analytics</text>
+    <rect x="878" y="412" width="120" height="30" rx="6" class="nb2"/><text x="938" y="431" class="tmono10 tc">eno1 · 192.168.90.10</text>
+    <rect x="1010" y="412" width="116" height="30" rx="6" class="nb2"/><text x="1068" y="431" class="tmono10 tc">GPU: video infer</text>
+    <text x="1000" y="470" class="tmono10 tc" fill="#fbbf24">ULCL: cam traffic breaks out HERE —</text>
+    <text x="1000" y="484" class="tmono10 tc" fill="#fbbf24">8K streams never touch the WAN</text>
+  </g>
+  <line x1="780" y1="414" x2="860" y2="426" class="lnk-a flow" stroke-width="2.4"/>
+
+  <text x="600" y="560" class="tf tc">uplink walk: agv-17 → radio → gNB wraps in GTP-U [outer 10.10.3.1→10.10.3.2 · UDP 2152 · TEID 0x1a2b41 · inner 10.45.0.23→8.8.8.8]</text>
+  <text x="600" y="578" class="tf tc">→ upf-1 ens1 XDP: TEID lookup → QER → URR → strip 36 outer bytes → route → ens2 → edge-rtr → internet. Radio leg is PDCP-encrypted; N3 is inside the fenced campus.</text>
+</svg>
+<div class="legend">
+  <span class="lg"><i class="sw-box" style="--c:#38e1ff"></i>N3 port (GTP-U)</span>
+  <span class="lg"><i class="sw-box" style="--c:#34d399"></i>N6 port (internet)</span>
+  <span class="lg"><i class="sw-box" style="--c:#fbbf24"></i>MEC breakout port</span>
+  <span class="lg"><i class="sw-box" style="--c:#a78bfa"></i>N4 mgmt (PFCP)</span>
+  <span class="lg"><i class="sw-dash" style="--c:#3b4d8f"></i>radio link</span>
+</div>
+<figcaption><b>FIG 5.1</b> — every 3GPP reference point is a real NIC on <code>upf-1</code>: ens1 faces the gNB (N3), ens2 the border router (N6), ens3 the MEC server, eno0 carries PFCP from the cloud SMF. One XDP program on ens1 is the entire uplink fast path.</figcaption>
+</figure>
+
+<h3>The header proof — VXLAN and GTP-U side by side</h3>
+<figure class="diagram">
+<svg viewBox="0 0 1200 250" role="img" aria-label="VXLAN versus GTP-U header structure comparison">
+  <text x="40" y="36" class="tt12">What Wormhole speaks today (VXLAN):</text>
+  <g>
+    <rect x="40"  y="48" width="110" height="46" rx="6" class="nb-am"/><text x="95"  y="67" class="tt12 tc">Outer Eth</text><text x="95" y="84" class="tmono10 tc">14 B</text>
+    <rect x="150" y="48" width="130" height="46" rx="6" class="nb-am"/><text x="215" y="67" class="tt12 tc">Outer IP</text><text x="215" y="84" class="tmono10 tc">20 B</text>
+    <rect x="280" y="48" width="120" height="46" rx="6" class="nb-am"/><text x="340" y="67" class="tt12 tc">UDP</text><text x="340" y="84" class="tmono10 tc">dst 4790</text>
+    <rect x="400" y="48" width="130" height="46" rx="6" class="nb-cy"/><text x="465" y="67" class="tt12 tc">VXLAN · 8 B</text><text x="465" y="84" class="tmono10 tc">VNI = which network</text>
+    <rect x="530" y="48" width="110" height="46" rx="6" class="nb2"/><text x="585" y="67" class="tt12 tc">Inner Eth</text><text x="585" y="84" class="tmono10 tc">14 B</text>
+    <rect x="640" y="48" width="120" height="46" rx="6" class="nb2"/><text x="700" y="67" class="tt12 tc">Inner IP</text><text x="700" y="84" class="tmono10 tc">20 B</text>
+    <rect x="760" y="48" width="300" height="46" rx="6" class="nb2"/><text x="910" y="74" class="tt12 tc">payload</text>
+  </g>
+  <text x="40" y="138" class="tt12">What a UPF speaks (GTP-U):</text>
+  <g>
+    <rect x="40"  y="150" width="110" height="46" rx="6" class="nb-am"/><text x="95"  y="169" class="tt12 tc">Outer Eth</text><text x="95" y="186" class="tmono10 tc">14 B</text>
+    <rect x="150" y="150" width="130" height="46" rx="6" class="nb-am"/><text x="215" y="169" class="tt12 tc">Outer IP</text><text x="215" y="186" class="tmono10 tc">20 B</text>
+    <rect x="280" y="150" width="120" height="46" rx="6" class="nb-am"/><text x="340" y="169" class="tt12 tc">UDP</text><text x="340" y="186" class="tmono10 tc">dst 2152</text>
+    <rect x="400" y="150" width="130" height="46" rx="6" class="nb-vi"/><text x="465" y="169" class="tt12 tc">GTP-U · 8 B</text><text x="465" y="186" class="tmono10 tc">TEID = which session</text>
+    <rect x="530" y="150" width="120" height="46" rx="6" class="nb2"/><text x="590" y="169" class="tt12 tc">Inner IP</text><text x="590" y="186" class="tmono10 tc">20 B</text>
+    <rect x="650" y="150" width="410" height="46" rx="6" class="nb2"/><text x="855" y="176" class="tt12 tc">payload</text>
+  </g>
+  <path d="M40,104 L40,112 L530,112 L530,104" class="lnk-g" fill="none"/>
+  <path d="M40,204 L40,212 L530,212 L530,204" class="lnk-g" fill="none"/>
+  <text x="285" y="232" class="ts11 tc" fill="#34d399">identical structure → same XDP primitives: adjust_head, map lookup on tunnel ID, redirect</text>
+  <text x="800" y="232" class="ts11 tc" fill="#a78bfa">one difference: no inner Ethernet — GTP is an L3 tunnel (simpler, if anything)</text>
+</svg>
+<figcaption><b>FIG 5.2</b> — swap the 8-byte tunnel header and the port number, key your maps on TEID instead of VNI, and the encap/decap engine you wrote for VXLAN is a UPF fast path.</figcaption>
+</figure>
+
+<h3>3GPP jargon → eBPF objects (the whole mapping)</h3>
+<table class="cmp">
+  <tr><th>PFCP concept</th><th>What it means</th><th>Wormhole implementation</th></tr>
+  <tr><td>PDR — Packet Detection Rule</td><td>"traffic matching X belongs to session Y"</td><td>hash map: TEID (uplink) / UE IP (downlink) → session struct — your <code>mac_table</code> pattern exactly</td></tr>
+  <tr><td>FAR — Forwarding Action Rule</td><td>"forward / encapsulate toward Z"</td><td><code>bpf_xdp_adjust_head</code> + <code>bpf_redirect</code> — your VTEP code path</td></tr>
+  <tr><td>QER — QoS Enforcement Rule</td><td>"cap this session at N Mbps"</td><td>token-bucket state in a per-session map entry (new, small)</td></tr>
+  <tr><td>URR — Usage Reporting Rule</td><td>"meter it for billing"</td><td>per-session counters + ringbuf reports — your switch-agent ringbuf pattern</td></tr>
+</table>
+
+<div class="co num">
+  <div class="co-t">📊 Order of magnitude — why telcos will take the meeting</div>
+  <p>Incumbent software UPFs are DPDK-based: poll-mode drivers <b>pin dedicated cores at 100% — idle or busy</b> —
+  and want SR-IOV NICs and hugepage tuning. Fine in a telco datacenter; miserable in a port-side cabinet with a
+  power budget. An XDP UPF is interrupt-driven (CPU scales with load), runs on stock Linux, and needs no exotic NIC.
+  For a campus doing 5–20 Gbps, that's the difference between a €25K appliance and a €3K server at ~30 W idle.</p>
+</div>
+
+<div class="co warn">
+  <div class="co-t">⚠️ Reality check — a UPF is more than a fast path</div>
+  <p>The 3GPP spec also wants downlink buffering while a device sleeps (paging), usage report quotas, event
+  triggers, lawful-intercept hooks. Do <b>not</b> build a 5G core. Build the <em>data plane</em> and bolt it onto
+  an existing open core — free5GC or Open5GS — replacing their kernel/userspace UPF with your XDP one, PFCP in
+  front. That's a contained integration with an existing community who already measures UPF benchmarks for sport.</p>
+</div>
+
+<div class="co biz">
+  <div class="co-t">💼 Business lens — first 90 days if you pick this scenario</div>
+  <p>(1) Fork the PFCP agent of an open core; wire PDR/FAR into your maps; pass their conformance tests.
+  (2) Publish "Open5GS + Wormhole UPF: N× the throughput at 1/M the CPU" — this community benchmark <em>is</em>
+  the marketing. (3) Sell through private-5G integrators (they assemble radio + core + UPF for each campus);
+  license per site. Nokia/Ericsson won't feel you until you're established in campus networks — the segment they
+  price themselves out of.</p>
+</div>
+</section>
+  <section class="panel" id="tab-ndr" role="tabpanel">
+<p class="kicker">Chapter 06 · The agent's second job</p>
+<h2 class="scenario"><span class="ghost">06</span>East-west security: <em>the network that watches itself</em></h2>
+<div class="chips">
+  <span class="chip">Buyer: <b>CISO / SecOps</b></span>
+  <span class="chip c-c">New code: <b>flow maps + export — data plane unchanged</b></span>
+  <span class="chip c-g">Motion: <b>upsell to every existing deployment</b></span>
+  <span class="chip c-v">Market: <b>NDR / network observability</b></span>
+</div>
+
+<div class="prose">
+<p>Security teams see traffic entering and leaving the datacenter (<b>north-south</b>) through firewalls and
+proxies. What they famously cannot see is workload-to-workload traffic <em>inside</em> (<b>east-west</b>) — which
+is exactly where an intruder moves after the first foothold. Traditional answers: SPAN ports and hardware taps
+(miss everything that never crosses a physical switch), or per-app agents (deployment friction, userspace losses).</p>
+<p>Wormhole's agent already holds a privileged seat: <b>an XDP program on every interface of every enrolled host
+touches every packet anyway</b> — to forward it. Counting it costs a map update. This tab is not a new product;
+it's the second act of the same deployed fleet.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 1200 700" role="img" aria-label="Realistic east-west detection topology: two hosts with per-VM taps and NICs cabled through a ToR switch, plus collector and alert">
+  <!-- ============ host-1 ============ -->
+  <rect x="40" y="40" width="440" height="400" rx="14" class="zone"/>
+  <text x="58" y="64" class="tt12">host-1</text>
+  <text x="464" y="64" class="tf te">Debian 12 · wormhole-agent + flow module</text>
+
+  <!-- VMs -->
+  <rect x="60" y="82" width="190" height="92" rx="9" class="nb"/>
+  <rect x="60" y="82" width="190" height="20" rx="9" fill="#16214a"/><text x="70" y="96" class="tt12" font-size="11">VM web-1</text>
+  <rect x="76" y="110" width="158" height="26" rx="6" class="nb-cy"/><text x="155" y="127" class="tmono10 tc">tap-a1 · 172.16.1.10</text>
+  <text x="155" y="156" class="tf tc">52:54:00:a1:00:10</text>
+  <rect x="270" y="82" width="190" height="92" rx="9" class="nb-rd" filter="url(#glowR)"/>
+  <rect x="270" y="82" width="190" height="20" rx="9" fill="#3a1526"/><text x="280" y="96" class="tt12" font-size="11">VM web-2 ☠ compromised</text>
+  <rect x="286" y="110" width="158" height="26" rx="6" class="nb-rd"/><text x="365" y="127" class="tmono10 tc">tap-a2 · 172.16.1.11</text>
+  <text x="365" y="156" class="tf tc">52:54:00:a1:00:11</text>
+  <rect x="60" y="190" width="190" height="92" rx="9" class="nb"/>
+  <rect x="60" y="190" width="190" height="20" rx="9" fill="#16214a"/><text x="70" y="204" class="tt12" font-size="11">VM api-1</text>
+  <rect x="76" y="218" width="158" height="26" rx="6" class="nb-cy"/><text x="155" y="235" class="tmono10 tc">tap-a3 · 172.16.1.20</text>
+  <text x="155" y="264" class="tf tc">52:54:00:a1:00:20</text>
+  <rect x="270" y="190" width="190" height="92" rx="9" class="nb"/>
+  <rect x="270" y="190" width="190" height="20" rx="9" fill="#16214a"/><text x="280" y="204" class="tt12" font-size="11">VM queue (redis)</text>
+  <rect x="286" y="218" width="158" height="26" rx="6" class="nb-cy"/><text x="365" y="235" class="tmono10 tc">tap-a4 · 172.16.1.30 :6379</text>
+  <text x="365" y="264" class="tf tc">52:54:00:a1:00:30</text>
+
+  <!-- data plane bar -->
+  <rect x="60" y="312" width="400" height="40" rx="8" class="nb-gr"/>
+  <text x="260" y="329" class="tmono10 tc">wormhole data plane — XDP on every tap + eno1</text>
+  <text x="260" y="343" class="tmono10 tc">flow map {vni,5-tuple}→{pkts,bytes,flags,ts} · new-flow → ringbuf</text>
+  <line x1="155" y1="136" x2="130" y2="312" class="lnk-f"/>
+  <line x1="365" y1="136" x2="390" y2="312" class="lnk-f"/>
+  <line x1="155" y1="244" x2="165" y2="312" class="lnk-f"/>
+  <line x1="365" y1="244" x2="355" y2="312" class="lnk-f"/>
+
+  <!-- host NIC -->
+  <rect x="226" y="404" width="68" height="22" rx="5" class="pill" stroke="#fbbf24"/><text x="260" y="419" class="tmono10 tc">eno1</text>
+  <text x="304" y="419" class="tf">10.0.1.10/24 · 25GbE</text>
+  <line x1="260" y1="352" x2="260" y2="404" class="lnk" stroke-width="2.4"/>
+
+  <!-- ============ host-2 ============ -->
+  <rect x="720" y="40" width="440" height="400" rx="14" class="zone"/>
+  <text x="738" y="64" class="tt12">host-2</text>
+  <text x="1144" y="64" class="tf te">Debian 12 · wormhole-agent + flow module</text>
+
+  <rect x="740" y="82" width="190" height="92" rx="9" class="nb"/>
+  <rect x="740" y="82" width="190" height="20" rx="9" fill="#16214a"/><text x="750" y="96" class="tt12" font-size="11">VM db-1</text>
+  <rect x="756" y="110" width="158" height="26" rx="6" class="nb-cy"/><text x="835" y="127" class="tmono10 tc">tap-b1 · 172.16.2.10</text>
+  <text x="835" y="156" class="tf tc">52:54:00:b2:00:10</text>
+  <rect x="950" y="82" width="190" height="92" rx="9" class="nb"/>
+  <rect x="950" y="82" width="190" height="20" rx="9" fill="#16214a"/><text x="960" y="96" class="tt12" font-size="11">VM vault 🛡</text>
+  <rect x="966" y="110" width="158" height="26" rx="6" class="nb-cy"/><text x="1045" y="127" class="tmono10 tc">tap-b2 · 172.16.2.40 :8200</text>
+  <text x="1045" y="156" class="tf tc">52:54:00:b2:00:40</text>
+  <rect x="740" y="190" width="190" height="92" rx="9" class="nb"/>
+  <rect x="740" y="190" width="190" height="20" rx="9" fill="#16214a"/><text x="750" y="204" class="tt12" font-size="11">VM db-2</text>
+  <rect x="756" y="218" width="158" height="26" rx="6" class="nb-cy"/><text x="835" y="235" class="tmono10 tc">tap-b3 · 172.16.2.11 :22</text>
+  <text x="835" y="264" class="tf tc">52:54:00:b2:00:11</text>
+  <rect x="950" y="190" width="190" height="92" rx="9" class="nb"/>
+  <rect x="950" y="190" width="190" height="20" rx="9" fill="#16214a"/><text x="960" y="204" class="tt12" font-size="11">VM backup</text>
+  <rect x="966" y="218" width="158" height="26" rx="6" class="nb-cy"/><text x="1045" y="235" class="tmono10 tc">tap-b4 · 172.16.2.50</text>
+  <text x="1045" y="264" class="tf tc">52:54:00:b2:00:50</text>
+
+  <rect x="740" y="312" width="400" height="40" rx="8" class="nb-gr"/>
+  <text x="940" y="329" class="tmono10 tc">wormhole data plane — XDP on every tap + eno1</text>
+  <text x="940" y="343" class="tmono10 tc">flow map {vni,5-tuple}→{pkts,bytes,flags,ts} · new-flow → ringbuf</text>
+  <line x1="835" y1="136" x2="810" y2="312" class="lnk-f"/>
+  <line x1="1045" y1="136" x2="1070" y2="312" class="lnk-f"/>
+  <line x1="835" y1="244" x2="845" y2="312" class="lnk-f"/>
+  <line x1="1045" y1="244" x2="1035" y2="312" class="lnk-f"/>
+
+  <rect x="906" y="404" width="68" height="22" rx="5" class="pill" stroke="#fbbf24"/><text x="940" y="419" class="tmono10 tc">eno1</text>
+  <text x="984" y="419" class="tf">10.0.1.11/24 · 25GbE</text>
+  <line x1="940" y1="352" x2="940" y2="404" class="lnk" stroke-width="2.4"/>
+
+  <!-- ============ ToR switch ============ -->
+  <g>
+    <rect x="520" y="470" width="160" height="64" rx="10" class="nb"/>
+    <rect x="520" y="470" width="160" height="20" rx="10" fill="#16214a"/><text x="532" y="484" class="tt12" font-size="11">tor-1 (ToR switch)</text>
+    <rect x="540" y="462" width="34" height="14" rx="3" class="pill"/><text x="557" y="473" class="tmono10 tc" font-size="8">e1/1</text>
+    <rect x="626" y="462" width="34" height="14" rx="3" class="pill"/><text x="643" y="473" class="tmono10 tc" font-size="8">e1/2</text>
+    <text x="600" y="516" class="tmono10 tc">SPAN port: sees ONLY inter-host frames</text>
+  </g>
+  <path d="M260,426 C260,470 420,462 540,468" class="lnk" stroke-width="2.4" fill="none"/>
+  <path d="M940,426 C940,470 780,462 660,468" class="lnk" stroke-width="2.4" fill="none"/>
+  <text x="392" y="452" class="tf tc">underlay 10.0.1.0/24</text>
+
+  <!-- baseline flow -->
+  <path d="M155,244 C155,300 200,306 260,310" class="lnk-c" opacity=".45" fill="none"/>
+  <path d="M260,354 C300,430 480,450 545,464 M655,464 C760,450 880,420 835,136" opacity="0" fill="none"/>
+  <text x="60" y="470" class="tf">baseline: api-1 → db-1 :5432 (learned, boring)</text>
+
+  <!-- ATTACK 1: intra-host, tap to tap -->
+  <path d="M365,136 C400,160 400,200 365,218" class="lnk-r flow" fill="none" marker-end="url(#arrR)"/>
+  <text x="470" y="182" class="ts11" fill="#fb7185">① web-2 → queue :6379</text>
+  <text x="470" y="197" class="tf">tap-a2 → XDP → tap-a4 — never reaches</text>
+  <text x="470" y="210" class="tf">eno1 or tor-1: SPAN/tap tools are blind here</text>
+
+  <!-- ATTACK 2: cross-host via real cables -->
+  <path d="M444,127 C520,127 560,180 560,280 C560,380 545,430 557,462" class="lnk-r flow" fill="none"/>
+  <path d="M643,462 C660,420 680,380 700,300 C720,200 900,150 966,127" class="lnk-r flow" fill="none" marker-end="url(#arrR)"/>
+  <text x="600" y="560" class="ts11 tc" fill="#fb7185">② web-2 → vault :8200 — rides the real wire: tap-a2 → eno1 → tor-1 e1/1→e1/2 → eno1 → tap-b2</text>
+  <text x="600" y="576" class="tf tc">both agents record it independently — a lying host is contradicted by its peer</text>
+
+  <!-- collector -->
+  <g>
+    <rect x="40" y="590" width="360" height="86" rx="12" class="nb-vi" filter="url(#glowV)"/>
+    <text x="220" y="614" class="tt12 tc">collector.mon · 10.0.9.5:4317 (OTLP)</text>
+    <text x="220" y="632" class="tmono10 tc">comms graph: 4,812 known edges</text>
+    <text x="220" y="648" class="tmono10 tc">new today: web-2→queue, web-2→vault, web-2→db-2…</text>
+    <text x="220" y="664" class="tmono10 tc">web-2 fan-out 14 dst/30s · SYN-only 92%</text>
+  </g>
+  <path d="M120,352 C80,440 60,520 70,590" class="ctrl" stroke="#34d399" marker-end="url(#arrG)"/>
+  <path d="M1080,352 C1120,480 700,560 400,620" class="ctrl" stroke="#34d399" marker-end="url(#arrG)"/>
+
+  <!-- alert -->
+  <g>
+    <rect x="760" y="590" width="400" height="86" rx="12" class="nb-rd" filter="url(#glowR)"/>
+    <use href="#sym-alert" x="778" y="608" width="22" height="22" class="ic-r"/>
+    <text x="810" y="620" class="tt12">ALERT — lateral movement suspected</text>
+    <text x="810" y="640" class="tmono10">first-seen edge: 172.16.1.11 → 172.16.2.40:8200</text>
+    <text x="810" y="656" class="tmono10">scan pattern from web-2 (tap-a2) · quarantine?</text>
+  </g>
+  <path d="M400,633 L756,633" class="lnk-r" marker-end="url(#arrR)" opacity=".7"/>
+</svg>
+<div class="legend">
+  <span class="lg"><i class="sw-box" style="--c:#38e1ff"></i>VM tap (overlay port)</span>
+  <span class="lg"><i class="sw-box" style="--c:#fbbf24"></i>host NIC (underlay)</span>
+  <span class="lg"><i class="sw-dash" style="--c:#fb7185"></i>anomalous flow</span>
+  <span class="lg"><i class="sw-dot" style="--c:#34d399"></i>telemetry export (OTLP)</span>
+</div>
+<figcaption><b>FIG 6.1</b> — attack ① never leaves host-1: it goes tap-a2 → XDP → tap-a4 in memory, invisible to the ToR's SPAN port. Attack ② crosses the real cable path eno1→tor-1→eno1 and is recorded by <em>both</em> agents. Every port, address and MAC in the frame is what you would see in <code>ip a</code> on these boxes.</figcaption>
+</figure>
+
+<h3>The telemetry pipeline (and why it's nearly free)</h3>
+<ol class="walk">
+  <li><b>In XDP:</b> after the forwarding decision, update a per-CPU flow map keyed <code>{vni, src, dst, proto, ports}</code> → <code>{packets, bytes, tcp_flags, first_seen, last_seen}</code>. A hash update on a hot cache line: tens of nanoseconds.</li>
+  <li><b>New flow only:</b> first packet of an unseen key pushes one event through a ring buffer — the same <code>new_discovered_entries_rb</code> pattern your switch agent already uses for MAC discovery. Per-packet events would melt userspace; per-<em>flow</em> events are a trickle.</li>
+  <li><b>Agent:</b> drains the ring buffer, aggregates, ships IPFIX/OTLP to the collector every few seconds.</li>
+  <li><b>Collector:</b> maintains the org-wide communications graph and scores changes: first-seen edges, fan-out spikes, SYN-heavy scanning, beaconing periodicity, byte-count exfil anomalies.</li>
+</ol>
+
+<div class="co">
+  <div class="co-t">💡 Concept — "first-seen edge" beats signatures</div>
+  <p>Classic IDS asks "does this payload match a known attack?" — an arms race you lose on encrypted traffic anyway.
+  Graph-based NDR asks a colder question: <b>"has this conversation ever happened before?"</b> A web tier has no
+  business opening SSH to a database or touching the secrets vault — no signature needed, and TLS doesn't hide
+  <em>who talked to whom</em>. Metadata is the product; that's why losing payload visibility to encryption
+  (including your own!) costs the detection model nothing.</p>
+</div>
+
+<div class="co warn">
+  <div class="co-t">⚠️ Reality check</div>
+  <p>Kernel-level visibility is not omniscience: a fully kernel-compromised host can lie about its own traffic —
+  which is precisely why the <em>receiving</em> host's agent also reports, and the graph is built from both ends
+  (a liar contradicts its peers). And plan cardinality limits from day one: per-CPU maps with LRU eviction, else a
+  port-scan becomes a memory-exhaustion attack on your own telemetry.</p>
+</div>
+
+<div class="co biz">
+  <div class="co-t">💼 Business lens — the expansion product, and the endgame</div>
+  <p>This is the classic land-and-expand second act: connectivity lands the agent (tabs 02–05), the flow module is
+  a feature flag away, priced per node per month against NDR budgets that already exist (Corelight, ExtraHop,
+  Darktrace line items). The endgame is act three: the same XDP hook that <em>observes</em> can <em>enforce</em> —
+  first-seen edges can require approval, policies become map entries, and Wormhole grows into a distributed
+  firewall / microsegmentation product. Observe → alert → enforce, all on one deployed binary.</p>
+</div>
+</section>
+  <section class="panel" id="tab-crypto" role="tabpanel">
+<p class="kicker">Chapter 07 · Under the hood</p>
+<h2 class="scenario"><span class="ghost">07</span>Encryption in XDP: <em>bpf_crypto, key IDs, and zero-loss rotation</em></h2>
+<div class="chips">
+  <span class="chip c-a">Kernel: <b>≥ 6.10 — bpf_crypto kfuncs</b></span>
+  <span class="chip c-g">Design goal: <b>AEAD (AES-GCM)</b></span>
+  <span class="chip c-c">Rotation: <b>zero packet loss</b></span>
+  <span class="chip c-v">Keys: <b>per-VNI, per-epoch</b></span>
+</div>
+
+<div class="prose">
+<p>VXLAN ships with <b>no security whatsoever</b> — anyone on the path can read frames and inject their own.
+Historically you'd wrap tunnels in IPsec or WireGuard and give back much of the XDP advantage. Since Linux 6.10,
+the <code>bpf_crypto</code> kfunc family lets an XDP program call into the kernel crypto subsystem directly:
+userspace creates a cipher context (algorithm + key), pins it where the program can reach it, and the hot path
+calls <code>bpf_crypto_encrypt()</code> / <code>bpf_crypto_decrypt()</code> without ever leaving the driver.
+This tab is the full design: wire format, key distribution, and the rotation dance.</p>
+</div>
+
+<h3>The wire format — where every byte goes</h3>
+<figure class="diagram">
+<svg viewBox="0 0 1200 315" role="img" aria-label="Encrypted Wormhole packet wire format and VXLAN header bit layout">
+  <g>
+    <rect x="40"   y="34" width="90"  height="46" rx="6" class="nb-am"/><text x="85"   y="53" class="tt12 tc">Outer Eth</text><text x="85" y="70" class="tmono10 tc">14 B</text>
+    <rect x="130"  y="34" width="110" height="46" rx="6" class="nb-am"/><text x="185"  y="53" class="tt12 tc">Outer IP</text><text x="185" y="70" class="tmono10 tc">20 B · clear</text>
+    <rect x="240"  y="34" width="70"  height="46" rx="6" class="nb-am"/><text x="275"  y="53" class="tt12 tc">UDP</text><text x="275" y="70" class="tmono10 tc">8 B</text>
+    <rect x="310"  y="34" width="90"  height="46" rx="6" class="nb-cy"/><text x="355"  y="53" class="tt12 tc">VXLAN</text><text x="355" y="70" class="tmono10 tc">8 B · clear</text>
+    <rect x="400"  y="34" width="100" height="46" rx="6" class="nb-am"/><text x="450"  y="53" class="tt12 tc">counter</text><text x="450" y="70" class="tmono10 tc">8 B · clear</text>
+    <rect x="500"  y="34" width="460" height="46" rx="6" class="nb2"/>
+    <use href="#sym-lock" x="514" y="47" width="18" height="18" class="ic-g"/>
+    <text x="730"  y="53" class="tt12 tc">ciphertext — the entire inner Ethernet frame</text><text x="730" y="70" class="tmono10 tc">AES-256-GCM</text>
+    <rect x="960"  y="34" width="120" height="46" rx="6" class="nb-gr"/><text x="1020" y="53" class="tt12 tc">auth tag</text><text x="1020" y="70" class="tmono10 tc">16 B</text>
+  </g>
+
+  <path d="M310,80 L230,140" class="lnk-f"/>
+  <path d="M400,80 L870,140" class="lnk-f"/>
+
+  <!-- bit layout -->
+  <text x="190" y="132" class="ts11">the VXLAN header, bit by bit:</text>
+  <text x="190" y="158" class="tmono10">0</text><text x="360" y="158" class="tmono10">8</text><text x="530" y="158" class="tmono10">16</text><text x="700" y="158" class="tmono10">24</text><text x="862" y="158" class="tmono10 te">31</text>
+  <rect x="190" y="164" width="170" height="38" rx="5" class="nb2"/><text x="275" y="188" class="tmono10 tc">flags: I=1 (VNI valid)</text>
+  <rect x="360" y="164" width="510" height="38" rx="5" class="nb2"/><text x="615" y="188" class="tmono10 tc">reserved — 24 bits</text>
+  <rect x="190" y="206" width="510" height="38" rx="5" class="nb-vi"/><text x="445" y="230" class="tmono10 tc">VNI — 24 bits (which virtual network → which key set)</text>
+  <rect x="700" y="206" width="170" height="38" rx="5" class="nb-gr" filter="url(#glowC)"/><text x="785" y="230" class="tmono10 tc">key_id — 8 bits</text>
+  <text x="880" y="230" class="ts11" fill="#34d399">← reserved byte we claim: costs 0 extra bytes on the wire</text>
+
+  <text x="190" y="272" class="ts11" fill="#fbbf24">nonce (96 bits) = salt[epoch] (32b) ‖ per-peer counter (64b) — the counter field above transmits it</text>
+  <text x="190" y="292" class="ts11" fill="#a78bfa">AAD = VNI ‖ key_id — the tag authenticates the clear headers too: a packet cannot be spliced into another network or epoch</text>
+</svg>
+<figcaption><b>FIG 7.1</b> — routers need the amber fields to deliver the packet; the receiver needs VXLAN + counter to pick a key and rebuild the nonce; everything a host actually said is ciphertext. Total overhead: 50 + 8 + 16 = 74 bytes.</figcaption>
+</figure>
+
+<div class="co warn">
+  <div class="co-t">⚠️ Reality check — GCM's one commandment, and one kernel caveat</div>
+  <p><b>Never reuse a (key, nonce) pair.</b> With AES-GCM a single nonce reuse leaks plaintext XORs and can forge
+  tags. Hence the boring-on-purpose construction: a monotonically increasing 64-bit counter per sender, salt bound
+  to the key epoch, and rekey long before any counter could wrap. Replay is handled WireGuard-style: receivers keep
+  a sliding window per peer and drop stale counters. Second: <code>bpf_crypto</code> coverage of kernel cipher
+  types has been expanding since 6.10 — <b>verify AEAD availability on your target kernel</b>; if your distro's
+  kernel only exposes plain ciphers to BPF, ship the tunnel-mode fallback (kernel WireGuard under the overlay)
+  and keep the wire format ready.</p>
+</div>
+
+<h3>Key rotation with zero packet loss</h3>
+<div class="prose">
+<p>Rotation fails in the obvious design: flip everyone from K1 to K2 "at the same time" — there is no same time in
+a distributed system, and every in-flight packet during the flip is garbage to its receiver. The fix is the
+<b>key_id</b> byte: receivers hold <em>both</em> keys during a transition and let each packet declare which one it
+used. The Controller runs a three-step epoch state machine:</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 1200 470" role="img" aria-label="Three-phase zero-loss key rotation choreography">
+  <!-- panel 1 -->
+  <g>
+    <rect x="40" y="36" width="340" height="330" rx="14" class="zone"/>
+    <rect x="110" y="56" width="200" height="34" rx="10" class="nb-vi"/><text x="210" y="78" class="tt12 tc">Controller</text>
+    <path d="M160,90 C130,120 115,140 108,158" class="ctrl" marker-end="url(#arrV)"/>
+    <path d="M260,90 C290,120 305,140 312,158" class="ctrl" marker-end="url(#arrV)"/>
+    <text x="210" y="122" class="ts11 tc" fill="#a78bfa">push K2 (over mTLS)</text>
+    <rect x="60" y="160" width="140" height="118" rx="10" class="nb"/>
+    <text x="130" y="182" class="tt12 tc">node A</text>
+    <text x="130" y="204" class="tmono10 tc">crypto_ctx_map</text>
+    <text x="130" y="226" class="tmono10 tc">1 → K1</text>
+    <text x="130" y="246" class="tmono10 tc" fill="#34d399">2 → K2 ✚</text>
+    <rect x="220" y="160" width="140" height="118" rx="10" class="nb"/>
+    <text x="290" y="182" class="tt12 tc">node B</text>
+    <text x="290" y="204" class="tmono10 tc">crypto_ctx_map</text>
+    <text x="290" y="226" class="tmono10 tc">1 → K1</text>
+    <text x="290" y="246" class="tmono10 tc" fill="#34d399">2 → K2 ✚</text>
+    <path d="M200,300 L220,300" class="lnk-c" marker-end="url(#arrC)"/>
+    <rect x="130" y="286" width="64" height="28" rx="6" class="pill"/><text x="162" y="304" class="tmono10 tc">key_id=1</text>
+    <text x="210" y="342" class="tt12 tc" fill="#38e1ff">① PREPARE</text>
+    <text x="210" y="360" class="ts11 tc">everyone can decrypt 1 and 2 · still sending 1</text>
+  </g>
+  <!-- panel 2 -->
+  <g>
+    <rect x="430" y="36" width="340" height="330" rx="14" class="zone"/>
+    <rect x="500" y="56" width="200" height="34" rx="10" class="nb-vi"/><text x="600" y="78" class="tt12 tc">Controller</text>
+    <path d="M550,90 C520,120 505,140 498,158" class="ctrl" marker-end="url(#arrV)"/>
+    <path d="M650,90 C680,120 695,140 702,158" class="ctrl" marker-end="url(#arrV)"/>
+    <text x="600" y="122" class="ts11 tc" fill="#a78bfa">all acked → "send with 2"</text>
+    <rect x="450" y="160" width="140" height="118" rx="10" class="nb"/>
+    <text x="520" y="182" class="tt12 tc">node A</text>
+    <text x="520" y="204" class="tmono10 tc">crypto_ctx_map</text>
+    <text x="520" y="226" class="tmono10 tc">1 → K1</text>
+    <text x="520" y="246" class="tmono10 tc" fill="#34d399">2 → K2 ★send</text>
+    <rect x="610" y="160" width="140" height="118" rx="10" class="nb"/>
+    <text x="680" y="182" class="tt12 tc">node B</text>
+    <text x="680" y="204" class="tmono10 tc">crypto_ctx_map</text>
+    <text x="680" y="226" class="tmono10 tc">1 → K1 (still valid)</text>
+    <text x="680" y="246" class="tmono10 tc" fill="#34d399">2 → K2 ★send</text>
+    <path d="M590,300 L610,300" class="lnk-g" marker-end="url(#arrG)"/>
+    <rect x="520" y="286" width="64" height="28" rx="6" class="pill"/><text x="552" y="304" class="tmono10 tc" fill="#34d399">key_id=2</text>
+    <text x="600" y="342" class="tt12 tc" fill="#34d399">② ACTIVATE</text>
+    <text x="600" y="360" class="ts11 tc">mixed 1s and 2s arrive during the flip — both decrypt fine</text>
+  </g>
+  <!-- panel 3 -->
+  <g>
+    <rect x="820" y="36" width="340" height="330" rx="14" class="zone"/>
+    <rect x="890" y="56" width="200" height="34" rx="10" class="nb-vi"/><text x="990" y="78" class="tt12 tc">Controller</text>
+    <path d="M940,90 C910,120 895,140 888,158" class="ctrl" marker-end="url(#arrV)"/>
+    <path d="M1040,90 C1070,120 1085,140 1092,158" class="ctrl" marker-end="url(#arrV)"/>
+    <text x="990" y="122" class="ts11 tc" fill="#a78bfa">grace over → "delete 1"</text>
+    <rect x="840" y="160" width="140" height="118" rx="10" class="nb"/>
+    <text x="910" y="182" class="tt12 tc">node A</text>
+    <text x="910" y="204" class="tmono10 tc">crypto_ctx_map</text>
+    <text x="910" y="226" class="tmono10 tc" fill="#fb7185" text-decoration="line-through">1 → K1 ✖</text>
+    <text x="910" y="246" class="tmono10 tc" fill="#34d399">2 → K2</text>
+    <rect x="1000" y="160" width="140" height="118" rx="10" class="nb"/>
+    <text x="1070" y="182" class="tt12 tc">node B</text>
+    <text x="1070" y="204" class="tmono10 tc">crypto_ctx_map</text>
+    <text x="1070" y="226" class="tmono10 tc" fill="#fb7185" text-decoration="line-through">1 → K1 ✖</text>
+    <text x="1070" y="246" class="tmono10 tc" fill="#34d399">2 → K2</text>
+    <path d="M980,300 L1000,300" class="lnk-g" marker-end="url(#arrG)"/>
+    <rect x="910" y="286" width="64" height="28" rx="6" class="pill"/><text x="942" y="304" class="tmono10 tc" fill="#34d399">key_id=2</text>
+    <text x="990" y="342" class="tt12 tc" fill="#a78bfa">③ RETIRE</text>
+    <text x="990" y="360" class="ts11 tc">a key_id=1 arriving now → unknown key → XDP_DROP</text>
+  </g>
+
+  <!-- timeline -->
+  <rect x="40"  y="404" width="330" height="26" rx="6" fill="#1a2450"/><text x="205" y="421" class="tmono10 tc">epoch 1 — only K1 exists</text>
+  <rect x="370" y="404" width="430" height="26" rx="6" fill="#0e3a2f" stroke="#34d399" stroke-width="1.2"/><text x="585" y="421" class="tmono10 tc" fill="#34d399">overlap window — both keys valid → ZERO packets lost</text>
+  <rect x="800" y="404" width="360" height="26" rx="6" fill="#1a2450"/><text x="980" y="421" class="tmono10 tc">epoch 2 — only K2 exists</text>
+  <text x="40" y="452" class="tf">a node offline through the whole window? It rejoins, fails to decrypt, re-enrolls with the Controller, fetches the current epoch — the failure mode is a reconnect, never silent corruption.</text>
+</svg>
+<figcaption><b>FIG 7.2</b> — the Controller advances phases only after every node acks (or gets quarantined). Rotation cadence is policy: hourly is comfortable; the overlap window is typically seconds long.</figcaption>
+</figure>
+
+<h3>What the hot path actually looks like</h3>
+<pre style="background:#0b1330;border:1px solid #243258;border-radius:12px;padding:16px 18px;overflow-x:auto;font:12.5px/1.6 var(--mono);color:#c8d6ff;max-width:900px"><span style="color:#6b7cab">// receive side, inside vxlan_xdp_external — simplified</span>
+__u8 key_id = outer_vxh-&gt;vx_vni &amp; 0xFF;               <span style="color:#6b7cab">// reserved byte → key selector</span>
+struct bpf_crypto_ctx **ctx = bpf_map_lookup_elem(&amp;crypto_ctx_map, &amp;key_id);
+if (!ctx || !*ctx)
+    return XDP_DROP;                                   <span style="color:#6b7cab">// unknown epoch → reject, never guess</span>
+
+<span style="color:#6b7cab">// nonce = epoch salt ‖ counter from the packet; AAD = VNI ‖ key_id</span>
+if (bpf_crypto_decrypt(*ctx, &amp;cipher_slice, &amp;plain_slice, &amp;iv_slice))
+    return XDP_DROP;                                   <span style="color:#6b7cab">// bad tag = forged/corrupt → drop</span>
+<span style="color:#6b7cab">// replay window check on counter, then: decap, learn, redirect — your existing code</span></pre>
+
+<h3>Threat model — earned honesty</h3>
+<table class="cmp">
+  <tr><th>Protected</th><th>Not protected — say it out loud</th></tr>
+  <tr>
+    <td class="good">Payload confidentiality &amp; integrity on any path (AES-GCM per frame)<br>Cross-VNI splicing (AAD binds network + epoch)<br>Replay (per-peer counter window)<br>Tenant separation (independent keys per VNI)</td>
+    <td>Traffic analysis: outer IPs, packet sizes and timing remain visible — padding/mixing is a research feature, not v1<br>A compromised Controller can mint keys → mTLS everywhere, short epochs, audit log, HSM roadmap<br>A compromised member node reads its own networks — that's tab 06's job to detect</td>
+  </tr>
+</table>
+
+<div class="co num">
+  <div class="co-t">📊 Order of magnitude — what crypto costs you</div>
+  <p>With AES-NI/VAES, AES-GCM runs at multiple GB/s per core in the kernel — commodity servers encrypt 10–25 Gbps
+  per core before anything else becomes the bottleneck. The architectural win stands regardless: userspace overlays
+  pay <em>crypto + two kernel crossings + copies</em>; Wormhole pays crypto alone. And it's policy-scoped: same-fabric
+  peers (tab 03) can skip encryption entirely per link, chosen by map flag, not by rebuild.</p>
+</div>
+
+<div class="co biz">
+  <div class="co-t">💼 Business lens — why this tab is the moat</div>
+  <p>Every scenario tab borrows its credibility from this one. "Encrypted L2 at XDP speed" is the sentence
+  competitors cannot say: ZeroTier would need a kernel data plane, Tailscale would need L2 semantics, OVS would
+  need a decade of unshipped IPsec ergonomics. The rotation design above is also your best technical blog post —
+  publish it early; it recruits both customers and engineers.</p>
+</div>
+</section>
+</main>
+
+<footer>
+  <b>Wormhole product scenarios</b> · generated as a self-contained teaching artifact · all diagrams are inline SVG — open the source and extract them freely.
+  Ballpark performance numbers are order-of-magnitude teaching aids; always benchmark on your own hardware and kernel.
+</footer>
+
+<script>
+(function(){
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  const panels = Array.from(document.querySelectorAll('.panel'));
+  function activate(id, push){
+    const tab = tabs.find(t => t.dataset.tab === id) || tabs[0];
+    const name = tab.dataset.tab;
+    tabs.forEach(t => { const on = t === tab; t.classList.toggle('active', on); t.setAttribute('aria-selected', on); });
+    panels.forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+    if (push !== false) history.replaceState(null, '', '#' + name);
+    window.scrollTo({top: 0});
+  }
+  tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.tab)));
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    if (/input|textarea/i.test(document.activeElement.tagName)) return;
+    const cur = tabs.findIndex(t => t.classList.contains('active'));
+    const next = (cur + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
+    activate(tabs[next].dataset.tab);
+  });
+  // cross-references inside prose: <a class="xref" data-goto="crypto">
+  document.addEventListener('click', e => {
+    const x = e.target.closest('[data-goto]');
+    if (x) { e.preventDefault(); activate(x.dataset.goto); }
+  });
+  window.addEventListener('hashchange', () => activate(location.hash.slice(1), false));
+  // honor reduced motion for SMIL animations (CSS can't reach them)
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll('animate, animateMotion, animateTransform').forEach(n => n.remove());
+  }
+  activate(location.hash.slice(1) || 'fund', false);
+})();
+</script>
+</body>
+</html>

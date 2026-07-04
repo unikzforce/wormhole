@@ -1,0 +1,39 @@
+{
+  "features": {
+    "ghcr.io/azutake/devcontainer-features/go-packages-install:latest": {
+      "version": "0.0.2",
+      "resolved": "ghcr.io/azutake/devcontainer-features/go-packages-install@sha256:2de9228b12e43192618e4b7652dad3922f2de1bc54ab94e4e66b1a8c79e83807",
+      "integrity": "sha256:2de9228b12e43192618e4b7652dad3922f2de1bc54ab94e4e66b1a8c79e83807"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:latest": {
+      "version": "4.0.0",
+      "resolved": "ghcr.io/devcontainers/features/docker-in-docker@sha256:4fa87399214366e320d489991769c4f3f461e1ffe461f54eea78a41b34945bb5",
+      "integrity": "sha256:4fa87399214366e320d489991769c4f3f461e1ffe461f54eea78a41b34945bb5"
+    },
+    "ghcr.io/devcontainers/features/go:latest": {
+      "version": "1.3.4",
+      "resolved": "ghcr.io/devcontainers/features/go@sha256:d85e921f91b41340055bb12b325d9d551170ed04b3b832e33530bf42f167c032",
+      "integrity": "sha256:d85e921f91b41340055bb12b325d9d551170ed04b3b832e33530bf42f167c032"
+    },
+    "ghcr.io/guiyomh/features/golangci-lint:latest": {
+      "version": "0.1.2",
+      "resolved": "ghcr.io/guiyomh/features/golangci-lint@sha256:6a8e1856aedb04681f0a81b974721ab86140058f4992c02c81c204be755474f2",
+      "integrity": "sha256:6a8e1856aedb04681f0a81b974721ab86140058f4992c02c81c204be755474f2"
+    },
+    "ghcr.io/guiyomh/features/goreleaser:latest": {
+      "version": "0.1.1",
+      "resolved": "ghcr.io/guiyomh/features/goreleaser@sha256:eba46940bb2064c6595f0d724b6fbf9f880a23306f2be65de6555173d7ff7c92",
+      "integrity": "sha256:eba46940bb2064c6595f0d724b6fbf9f880a23306f2be65de6555173d7ff7c92"
+    },
+    "ghcr.io/guiyomh/features/gotestsum:latest": {
+      "version": "0.1.1",
+      "resolved": "ghcr.io/guiyomh/features/gotestsum@sha256:cf4d3881a2fe8c429edb20dd4d173c2488faebaf9f0c46939fe734ef186ce239",
+      "integrity": "sha256:cf4d3881a2fe8c429edb20dd4d173c2488faebaf9f0c46939fe734ef186ce239"
+    },
+    "ghcr.io/guiyomh/features/pact-go:latest": {
+      "version": "0.1.1",
+      "resolved": "ghcr.io/guiyomh/features/pact-go@sha256:ba4ed71fa8cb9a1e7ee1650ca41546ad0d22eee9c5ade60a9a0ad3f2df4a0b0a",
+      "integrity": "sha256:ba4ed71fa8cb9a1e7ee1650ca41546ad0d22eee9c5ade60a9a0ad3f2df4a0b0a"
+    }
+  }
+}
